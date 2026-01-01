@@ -1393,11 +1393,96 @@ document.addEventListener('DOMContentLoaded', () => {
             return text;
         }
 
+
         textContent += generatePalaceText('本命各宮飛化', ui.mingPos.value);
         if (ui.dayunPos.value) textContent += generatePalaceText('大運各宮飛化', ui.dayunPos.value);
         if (ui.liunianPos.value) textContent += generatePalaceText('流年各宮飛化', ui.liunianPos.value);
 
+
+        // --- Liang Pai Analysis Integration ---
+        if (window.LiangLogic) {
+            textContent += '\n梁派飛星・深度命盤解碼\n';
+            textContent += '='.repeat(50) + '\n\n';
+
+            try {
+                // 0. Yearly Fortune
+                const yearly = window.LiangLogic.analyzeYearlyFortune(chart);
+                if (yearly) {
+                    textContent += `【${yearly.trafficLight === 'Green' ? '🟢' : (yearly.trafficLight === 'Red' ? '🔴' : '🟡')} ${yearly.yearLabel} 運勢紅綠燈】\n`;
+                    textContent += `年度主題：${yearly.theme}\n`;
+                    textContent += `${yearly.summary}\n`;
+                    textContent += `重點建議：${yearly.detailedAdvice}\n`;
+                    if (yearly.reason) textContent += `飛化應期：${yearly.reason}\n`;
+                    textContent += '\n';
+                }
+
+                // 1. Wealth
+                const wealth = window.LiangLogic.analyzeWealthVault(chart);
+                if (wealth) {
+                    textContent += `${wealth.title} ${wealth.stars}\n`;
+                    textContent += `判定：${wealth.result}\n`;
+                    textContent += `${wealth.advice}\n`;
+                    if (wealth.reason) textContent += `飛化軌跡：${wealth.reason.replace(/<br>/g, '\n')}\n`;
+                    textContent += '\n';
+                } else {
+                    textContent += `【財運評估】 ⭐⭐⭐\n`;
+                    textContent += `您的財運走勢較為平穩。建議多關注本命事業宮與財帛宮的星性互動，以專業技能穩步求財為佳。\n\n`;
+                }
+
+                // 2. Mental
+                const mental = window.LiangLogic.analyzeMentalState(chart);
+                if (mental) {
+                    textContent += `${mental.title} ${mental.stars}\n`;
+                    textContent += `${mental.advice}\n`;
+                    if (mental.reason) textContent += `飛化軌跡：${mental.reason.replace(/<br>/g, '\n')}\n`;
+                    textContent += '\n';
+                }
+
+                // 3. Advanced Insights
+                const insights = window.LiangLogic.getPsychologicalInsight(chart);
+                if (insights.length > 0) {
+                    textContent += `【深層讀心與行為建議】\n`;
+                    insights.forEach(item => {
+                        textContent += `➤ ${item.tag}\n`;
+                        textContent += `${item.insight}\n`;
+                        textContent += `💡 處方：${item.advice}\n`;
+                        if (item.reason) textContent += `🔍 軌跡：${item.reason.replace(/<br>/g, ' ')}\n`;
+                        textContent += '\n';
+                    });
+                }
+
+                // 4. Family
+                const families = ["Spouse", "Child_1", "Father", "Mother"];
+                let hasFamily = false;
+                let familyText = "";
+                families.forEach(rel => {
+                    const analysis = window.LiangLogic.analyzeFamilyMember(chart, rel);
+                    if (analysis && analysis.findings && analysis.findings.length > 0) {
+                        hasFamily = true;
+                        familyText += `${analysis.target} (借${analysis.palaceUsed}宮)\n`;
+                        analysis.findings.forEach(f => {
+                            familyText += `${f.icon} ${f.text}\n`;
+                            if (f.reason) familyText += `   飛化：${f.reason}\n`;
+                        });
+                        familyText += '\n';
+                    }
+                });
+
+                if (hasFamily) {
+                    textContent += `【六親緣分掃描】\n`;
+                    textContent += familyText;
+                }
+
+                textContent += '='.repeat(50) + '\n\n';
+
+            } catch (e) {
+                console.error("Error generating Liang text report", e);
+            }
+        }
+        // --------------------------------------
+
         textContent += '\n生成時間：' + new Date().toLocaleString('zh-TW') + '\n';
+
 
         return textContent;
     }
@@ -1734,6 +1819,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     htmlContent += generatePalacePages('本命各宮飛化', ui.mingPos.value, 'benming');
                     if (ui.dayunPos.value) htmlContent += generatePalacePages('大運各宮飛化', ui.dayunPos.value, 'dayun');
                     if (ui.liunianPos.value) htmlContent += generatePalacePages('流年各宮飛化', ui.liunianPos.value, 'liunian');
+
+                    // --- Liang Pai Report Page ---
+                    if (window.LiangLogic) {
+                        htmlContent += '<div class="page-break">';
+                        const liangHtml = window.LiangLogic.generateLiangStyleReport(chart);
+                        htmlContent += liangHtml;
+                        htmlContent += '</div>';
+                    }
+
                     htmlContent += '</body></html>';
 
                     // Write and print
