@@ -804,7 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Determine palace title background color
-            let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold;';
+            let palaceTitleStyle = 'position:absolute; bottom:5px; right:5px; font-weight:bold; cursor: pointer;';
 
             // Add background color if this palace title matches
             if (matchingPalaces.dayun.has(p.title) || matchingPalaces.liunian.has(p.title)) {
@@ -824,7 +824,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             html += `
                 <div class="${classes.join(' ')}" data-branch="${b}">
-                    <div class="palace-title" style="${palaceTitleStyle}">${p.title}</div>
+                <div class="palace-title js-palace-title" data-title="${p.title}" style="${palaceTitleStyle}">${p.title}</div>
                     <div class="celestial" style="cursor: pointer; text-decoration: underline;" title="點擊顯示四化">${p.celestial}</div>
                     <div class="name">${p.name}</div>
                     ${starsHtml}
@@ -835,13 +835,34 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Add Center Info Panel
-        html += `<div class="center-info" id="mid-panel"><p style="color:#888; text-align:center; padding-top:20px;">點擊星曜查看詳細解讀</p></div>`;
+        html += `<div class="center-info" id="mid-panel"><p style="color:#888; text-align:center; padding-top:20px;">點擊星曜或宮位名稱<br>查看詳細解讀</p></div>`;
 
         // Add Arrow Container for Four Transformations
         html += '<div class="arrow-container" id="arrow-container"></div>';
 
         html += '</div>';
         ui.chartContainer.innerHTML = html;
+
+        // Add Click Listeners to Palace Titles
+        document.querySelectorAll('.js-palace-title').forEach(el => {
+            el.addEventListener('click', function (e) {
+                e.stopPropagation(); // Prevent triggering other clicks
+                const title = this.dataset.title;
+                const meaning = (typeof ZIWEI_DATA_PALACE_MEANING !== 'undefined' && ZIWEI_DATA_PALACE_MEANING[title])
+                    ? ZIWEI_DATA_PALACE_MEANING[title]
+                    : '(暫無此宮位象義)';
+
+                const midPanel = document.getElementById('mid-panel');
+                if (midPanel) {
+                    midPanel.innerHTML = `
+                        <div style="padding:15px; text-align:left; height:100%; overflow-y:auto; box-sizing: border-box;">
+                            <h3 style="text-align:center; color:#1a237e; margin-top:0; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">${title}象義</h3>
+                            <div style="font-size:0.95em; line-height:1.6; color:#333; white-space: pre-wrap;">${meaning}</div>
+                        </div>
+                    `;
+                }
+            });
+        });
 
         // Draw arrows if a palace is selected
         activeSourceBranches.forEach(branch => {
