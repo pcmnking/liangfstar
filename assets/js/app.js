@@ -125,29 +125,98 @@ class ZiWeiChart {
         }
     }
 
+    // Helper: Simplified to Traditional Map
+    _toTraditional(str) {
+        if (!str) return str;
+        const charMap = {
+            '禄': '祿', '权': '權', '门': '門', '机': '機', '迁': '遷',
+            '艺': '藝', '属': '屬', '参': '參', '昼': '晝', '财': '財',
+            '车': '車', '马': '馬', '宫': '宮', '罗': '羅', '贝': '貝',
+            '见': '見', '页': '頁', '气': '氣', '鱼': '魚', '鸟': '鳥',
+            '龙': '龍', '龟': '龜', '农': '農', '长': '長', '个': '個',
+            '们': '們', '伦': '倫', '仓': '倉', '伟': '偉', '侧': '側',
+            '备': '備', '杰': '傑', '传': '傳', '伤': '傷', '仪': '儀',
+            '优': '優', '偿': '償', '元': '元', '园': '園', '团': '團',
+            '图': '圖', '国': '國', '圆': '圓', '场': '場', '块': '塊',
+            '坏': '壞', '墙': '牆', '声': '聲', '处': '處', '复': '復',
+            '头': '頭', '夸': '誇', '夹': '夾', '夺': '奪', '奋斗': '奮鬥',
+            '奸': '姦', '妇': '婦', '妈': '媽', '孙': '孫', '实': '實',
+            '宁': '寧', '宽': '寬', '导': '導', '寿': '壽', '将': '將',
+            '专': '專', '寻': '尋', '对': '對', '层': '層', '届': '屆',
+            '冈': '岡', '岩': '巖', '岛': '島', '峡': '峽', '峦': '巒',
+            '师': '師', '帅': '帥', '帐': '帳', '带': '帶', '帮': '幫',
+            '干': '乾', '广': '廣', '庆': '慶', '庐': '廬', '库': '庫',
+            '应': '應', '庙': '廟', '庞': '龐', '废': '廢', '异': '異',
+            '弑': '弒', '张': '張', '强': '強', '归': '歸', '录': '錄',
+            '彻': '徹', '征': '徵', '德': '德', '忆': '憶', '忧': '憂',
+            '怀': '懷', '态': '態', '总': '總', '恋': '戀', '恳': '懇',
+            '恶': '惡', '恼': '惱', '悬': '懸', '惊': '驚', '扑': '撲',
+            '执': '執', '扩': '擴', '扫': '掃', '扬': '揚', '护': '護',
+            '报': '報', '损': '損', '换': '換', '据': '據', '捷': '捷',
+            '攙': '攙', '摄': '攝', '摆': '擺', '摇': '搖', '摊': '攤',
+            '无': '無', '时': '時', '显': '顯', '晒': '曬', '晓': '曉',
+            '晕': '暈', '暂': '暫', '术': '術', '杀': '殺', '杂': '雜',
+            '条': '條', '来': '來', '杨': '楊', '标': '標', '树': '樹',
+            '样': '樣', '档': '檔', '桥': '橋', '梁': '梁', '梦': '夢',
+            '检': '檢', '椭': '橢', '楼': '樓', '乐': '樂', '概': '概',
+            '构': '構', '枪': '槍', '柜': '櫃', '台': '臺', '湾': '灣',
+            '叹': '嘆', '围': '圍', '圣': '聖', '坚': '堅', '坛': '壇',
+            '坝': '壩', '坞': '塢', '墳': '墳', '坠': '墜', '垄': '壟',
+            '垒': '壘', '垦': '墾', '够': '夠', '奖': '獎', '奥': '奧',
+            '妆': '妝'
+        };
+        return str.split('').map(char => charMap[char] || char).join('');
+    }
+
+    // Helper: Normalize Key
+    normalizeKey(key) {
+        let tradKey = this._toTraditional(key);
+
+        // Handle specialized mappings
+        if (tradKey === '官祿' || tradKey === '官祿宮') return '事業宮';
+        if (tradKey === '僕役' || tradKey === '僕役宮') return '交友宮';
+
+        const palacePrefixes = [
+            '命', '兄弟', '夫妻', '子女', '財帛', '疾厄',
+            '遷移', '交友', '事業', '田宅', '福德', '父母'
+        ];
+
+        // If it starts with a palace name but doesn't have '宮', add it.
+        // Assuming strict matching for the 2-char prefix to avoid false positives?
+        // But '命' is 1 char.
+        // Let's iterate.
+        for (const prefix of palacePrefixes) {
+            if (tradKey === prefix) {
+                return prefix + '宮';
+            }
+        }
+
+        if (tradKey.endsWith('宮')) return tradKey;
+
+        // If it is '祿', '權', '科', '忌', return as is.
+        if (['祿', '權', '科', '忌'].includes(tradKey)) return tradKey;
+
+        return tradKey;
+    }
+
     // Helper to get text
     getInterpretation(sourceTitle, transType, targetTitle) {
         if (!this.interpretations || Object.keys(this.interpretations).length === 0) return '(正在讀取象義資料...)';
 
-        // Helper to find key match (Try exact, then +宮, then -宮)
-        const findKey = (obj, key) => {
-            if (!obj) return null;
-            if (obj[key]) return key;
-            if (obj[key + '宮']) return key + '宮';
-            if (key.endsWith('宮') && obj[key.slice(0, -1)]) return key.slice(0, -1);
-            return null;
-        };
+        const sourceKey = this.normalizeKey(sourceTitle);
+        const transKey = this.normalizeKey(transType);
+        const targetKey = this.normalizeKey(targetTitle);
 
         // 1. Find Source Key
-        const sourceKey = findKey(this.interpretations, sourceTitle);
-        if (sourceKey) {
+        if (this.interpretations[sourceKey]) {
             const sourceObj = this.interpretations[sourceKey];
-            const transObj = sourceObj[transType];
 
-            if (transObj) {
-                // 2. Find Target Key
-                const targetKey = findKey(transObj, targetTitle);
-                if (targetKey) {
+            // 2. Find Trans Key
+            if (sourceObj[transKey]) {
+                const transObj = sourceObj[transKey];
+
+                // 3. Find Target Key
+                if (transObj[targetKey]) {
                     return transObj[targetKey];
                 }
             }

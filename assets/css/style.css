@@ -374,3 +374,37 @@ body {
 #deselectAllPalaces:hover {
     background-color: #c62828;
 }
+
+/* Action Buttons Container for better layout */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+    align-items: center;
+}
+
+.action-buttons button {
+    padding: 6px 12px;
+    font-size: 0.9em;
+    cursor: pointer;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.action-buttons button:hover {
+    background-color: #e0e0e0;
+}
+
+#copyTextBtn {
+    background-color: #e3f2fd;
+    border-color: #1976d2;
+    color: #1565c0;
+    font-weight: bold;
+}
+
+#copyTextBtn:hover {
+    background-color: #bbdefb;
+}

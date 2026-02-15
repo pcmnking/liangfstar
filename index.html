@@ -54,17 +54,18 @@
             </select>
         </div>
 
-        <!-- Button is not strictly needed for reactivity but good for UX -->
-        <button type="button" id="resetBtn">重置</button>
-        <button type="button" id="clearArrowsBtn" style="margin-left: 10px;">清除飛化</button>
-        <button type="button" id="copyLinkBtn" style="margin-left: 10px;">📋 複製連結</button>
-        <span id="copyStatus" style="margin-left: 10px; color: green; display: none;">✓ 已複製</span>
-        <button type="button" id="exportTextBtn" style="margin-left: 10px;">📄 下載文字檔</button>
-        <button type="button" id="copyTextBtn" style="margin-left: 10px;">📋 複製內容</button>
-        <span id="exportStatus" style="margin-left: 10px; color: blue; display: none;">⏳ 生成中...</span>
-        <span id="copyTextStatus" style="margin-left: 10px; color: green; display: none;">✓ 已複製</span>
-        <button type="button" id="exportPdfBtn" style="margin-left: 10px;">🖨️ 下載 PDF</button>
-        <span id="pdfStatus" style="margin-left: 10px; color: blue; display: none;">⏳ 生成中...</span>
+        <div class="action-buttons">
+            <button type="button" id="resetBtn">重置</button>
+            <button type="button" id="clearArrowsBtn">清除飛化</button>
+            <button type="button" id="copyLinkBtn">📋 複製連結</button>
+            <span id="copyStatus" style="color: green; display: none;">✓ 已複製</span>
+            <button type="button" id="exportTextBtn">📄 下載文字檔</button>
+            <button type="button" id="copyTextBtn">📋 複製內容</button>
+            <span id="exportStatus" style="color: blue; display: none;">⏳ 生成中...</span>
+            <span id="copyTextStatus" style="color: green; display: none;">✓ 已複製</span>
+            <button type="button" id="exportPdfBtn">🖨️ 下載 PDF</button>
+            <span id="pdfStatus" style="color: blue; display: none;">⏳ 生成中...</span>
+        </div>
     </form>
 
     <div class="main-content-wrapper">
