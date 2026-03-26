@@ -917,6 +917,7 @@ document.addEventListener('DOMContentLoaded', () => {
             el.addEventListener('click', function (e) {
                 e.stopPropagation(); // Prevent triggering other clicks
                 const title = this.dataset.title;
+                const branch = this.parentElement.dataset.branch;
                 const meaning = (typeof ZIWEI_DATA_PALACE_MEANING !== 'undefined' && ZIWEI_DATA_PALACE_MEANING[title])
                     ? ZIWEI_DATA_PALACE_MEANING[title]
                     : '(暫無此宮位象義)';
@@ -926,6 +927,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     midPanel.innerHTML = `
                         <div style="padding:15px; text-align:left; height:100%; overflow-y:auto; box-sizing: border-box;">
                             <h3 style="text-align:center; color:#1a237e; margin-top:0; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">${title}象義</h3>
+                            <div style="text-align:center; margin-bottom: 10px;">
+                                <button class="liang-btn trace-lu-btn" data-branch="${branch}" style="padding:5px 10px; cursor:pointer; background-color:#1e88e5; color:white; border:none; border-radius:4px; font-size: 0.9em;">追蹤祿轉忌</button>
+                                <button class="liang-btn trace-ji-btn" data-branch="${branch}" style="padding:5px 10px; cursor:pointer; background-color:#e53935; color:white; border:none; border-radius:4px; margin-left:5px; font-size: 0.9em;">追蹤忌轉忌</button>
+                            </div>
+                            <div class="liang-trace-result" style="margin-bottom: 15px; font-size: 0.9em; line-height: 1.5; color: #444;"></div>
                             <div style="font-size:0.95em; line-height:1.6; color:#333; white-space: pre-wrap;">${meaning}</div>
                         </div>
                     `;
@@ -1945,8 +1951,153 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Helper function for drawing liang paths
+    function drawLiangPaths(paths) {
+        const arrowContainer = document.getElementById('arrow-container');
+        if (!arrowContainer) return;
+
+        let svg = arrowContainer.querySelector('svg');
+        if (!svg) {
+            svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            svg.style.pointerEvents = 'none';
+            arrowContainer.appendChild(svg);
+        }
+
+        // Keep defs but remove paths
+        Array.from(svg.querySelectorAll('path')).forEach(p => p.remove());
+
+        if (!svg.querySelector('defs')) {
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const colors = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2', 'blue': '#1e88e5', 'red': '#e53935' };
+            Object.keys(colors).forEach(key => {
+                const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                marker.setAttribute('id', `arrowhead-${key}`);
+                marker.setAttribute('markerWidth', '10');
+                marker.setAttribute('markerHeight', '10');
+                marker.setAttribute('refX', '9');
+                marker.setAttribute('refY', '3');
+                marker.setAttribute('orient', 'auto');
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', '0 0, 10 3, 0 6');
+                polygon.setAttribute('fill', colors[key]);
+                marker.appendChild(polygon);
+                defs.appendChild(marker);
+            });
+            svg.appendChild(defs);
+        }
+
+        paths.forEach((p, idx) => {
+            const sourcePos = getPalaceCenter(p.source);
+            const targetPos = getPalaceCenter(p.target);
+            if (!sourcePos || !targetPos) return;
+
+            const colorClass = p.type === '祿' ? 'blue' : 'red';
+            const colorHex = p.type === '祿' ? '#1e88e5' : '#e53935';
+
+            const dx = targetPos.x - sourcePos.x;
+            const dy = targetPos.y - sourcePos.y;
+            const curvature = 0.2;
+            const midX = (sourcePos.x + targetPos.x) / 2;
+            const midY = (sourcePos.y + targetPos.y) / 2;
+            const offsetX = -dy * curvature;
+            const offsetY = dx * curvature;
+            const indexOffset = (idx - 1.5) * 12; 
+            const finalOffsetX = offsetX + (offsetY !== 0 ? indexOffset : 0);
+            const finalOffsetY = offsetY + (offsetX !== 0 ? indexOffset : 0);
+            const controlX = midX + finalOffsetX;
+            const controlY = midY + finalOffsetY;
+
+            const shortenFactor = 0.82;
+            const adjustedTargetX = sourcePos.x + dx * shortenFactor;
+            const adjustedTargetY = sourcePos.y + dy * shortenFactor;
+
+            const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pathEl.setAttribute('d', `M ${sourcePos.x} ${sourcePos.y} Q ${controlX} ${controlY} ${adjustedTargetX} ${adjustedTargetY}`);
+            pathEl.setAttribute('stroke', colorHex);
+            pathEl.setAttribute('fill', 'none');
+            pathEl.setAttribute('stroke-width', '3');
+            if (p.type === '忌') {
+                pathEl.setAttribute('stroke-dasharray', '5,5');
+            }
+            pathEl.setAttribute('marker-end', `url(#arrowhead-${colorClass})`);
+            svg.appendChild(pathEl);
+        });
+    }
+
     // Reactivity (Event Delegation)
     ui.chartContainer.addEventListener('click', (e) => {
+        // Handle Trace Buttons
+        if (e.target.classList.contains('trace-lu-btn') || e.target.classList.contains('trace-ji-btn')) {
+            const branch = e.target.dataset.branch;
+            const type = e.target.classList.contains('trace-lu-btn') ? '祿' : '忌';
+            
+            // clear old states directly from UI
+            activeSourceBranches.clear();
+            activeTargetStars.clear();
+            document.querySelectorAll('.active-trans').forEach(el => el.remove());
+            document.querySelectorAll('.multi-lu-highlight').forEach(el => el.classList.remove('multi-lu-highlight'));
+            
+            if (window.LiangLogic && window.LiangLogic.tracePath) {
+                const result = window.LiangLogic.tracePath(chart, branch, type, 0, 12, [], []);
+                
+                // Draw Paths
+                drawLiangPaths(result.paths);
+                
+                // Highlight Multiple Lu
+                result.multiLuNodes.forEach(m => {
+                    const palaceDiv = document.querySelector(`.palace[data-branch="${m.target}"]`);
+                    if (palaceDiv) palaceDiv.classList.add('multi-lu-highlight');
+                });
+                
+                // Print finding in the panel
+                const resultDiv = document.querySelector('.liang-trace-result');
+                if (resultDiv) {
+                     let html = `<div style="background: #f1f8e9; padding: 10px; border-radius: 4px; border-left: 4px solid #8bc34a;">`;
+                     html += `<strong>🔍 飛化軌跡：</strong><br>`;
+                     result.paths.forEach((p, i) => {
+                         let stepPrefix = i === 0 ? '首傳' : `第${i+1}轉`;
+                         let color = p.type === '祿' ? '#1e88e5' : '#e53935';
+                         
+                         let clashText = '';
+                         if (p.type === '忌') {
+                             let targetIdx = chart.branches.indexOf(p.target);
+                             let oppositeIdx = (targetIdx + 6) % 12;
+                             let oppositeBranch = chart.branches[oppositeIdx];
+                             clashText = ` <span style="color:#e53935; font-size:0.85em;">(沖 ${chart.palaces[oppositeBranch].title})</span>`;
+                         }
+                         
+                         html += `<span style="color:#666; font-size: 0.85em;">[${stepPrefix}]</span> ${chart.palaces[p.source].title} <strong style="color:${color};">化${p.type}入</strong> ${chart.palaces[p.target].title} <span style="color:#999;font-size:0.85em">(${p.star})</span>${clashText}<br>`;
+                     });
+                     
+                     if (result.multiLuNodes.length > 0) {
+                         html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc;">`;
+                         let traceStartType = result.multiLuNodes[0] ? result.multiLuNodes[0].traceType : '祿';
+                         let TitleStr = traceStartType === '祿' ? '✨ 多祿會合 (能量匯聚)' : '⚠️ 多忌會合 (損失擴大)';
+                         let ColorStr = traceStartType === '祿' ? '#d84315' : '#4a148c';
+                         html += `<strong style="color:${ColorStr};">${TitleStr}：</strong><br>`;
+                         result.multiLuNodes.forEach(m => {
+                             let providers = m.providers.map(pr => `${pr.title}(${pr.star})`).join('、');
+                             if (m.hasBirthTrans) providers += `、生年${m.traceType}`;
+                             let mColor = m.traceType === '祿' ? '#c62828' : '#7b1fa2';
+                             html += `<strong style="color:${mColor};">${chart.palaces[m.target].title}</strong> 達成 ${m.energyCount}${m.traceType}會合！<br>&nbsp;╰─ 來源：${providers}<br>`;
+                         });
+                         html += `</div>`;
+                     } else {
+                         let traceType = result.paths.length > 0 && result.paths[0].type === '忌' ? '忌' : '祿';
+                         html += `<div style="margin-top: 8px; color: #888; font-size: 0.85em;">該路徑未形成多${traceType}會合。</div>`;
+                     }
+                     html += `</div>`;
+                     resultDiv.innerHTML = html;
+                }
+            }
+            return; // stop execution because we handled button click
+        }
+
         // Handle Celestial Stem Click (Existing)
         if (e.target.classList.contains('celestial')) {
             const palaceDiv = e.target.closest('.palace');
@@ -2038,6 +2189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.clearArrowsBtn.addEventListener('click', () => {
             activeSourceBranches.clear();
             activeTargetStars.clear();
+            document.querySelectorAll('.multi-lu-highlight').forEach(el => el.classList.remove('multi-lu-highlight'));
             render();
         });
     }

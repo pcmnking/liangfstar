@@ -408,3 +408,17 @@ body {
 #copyTextBtn:hover {
     background-color: #bbdefb;
 }
+
+/* Liang Logic Multi-Lu Highlight */
+.multi-lu-highlight {
+    box-shadow: 0 0 15px 5px gold !important;
+    animation: pulse-gold 1.5s infinite;
+    border: 2px solid #ffd700 !important;
+    z-index: 10;
+}
+
+@keyframes pulse-gold {
+    0% { box-shadow: 0 0 5px 0px gold; border-color: #ffd700; }
+    50% { box-shadow: 0 0 15px 5px gold; border-color: #ffb300; }
+    100% { box-shadow: 0 0 5px 0px gold; border-color: #ffd700; }
+}

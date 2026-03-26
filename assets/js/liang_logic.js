@@ -504,6 +504,101 @@ const LiangLogic = {
 
         html += '</div>';
         return html;
+    },
+
+    // 梁式飛星：祿轉忌 / 忌轉忌 追蹤核心
+    tracePath: function (chart, startBranch, startType = '祿', depth = 0, maxDepth = 12, paths = [], multiLuNodes = []) {
+        if (depth > maxDepth) return { paths, multiLuNodes };
+
+        const pObj = chart.palaces[startBranch];
+        if (!pObj) return { paths, multiLuNodes };
+
+        const stem = pObj.celestial;
+        
+        // 決定此步的化星：若是首傳(depth=0)，依照 startType；若大於 0 (轉忌階段)，一律為「忌」(3)
+        const currentTypeStr = depth === 0 ? startType : '忌';
+        const typeIndex = currentTypeStr === '祿' ? 0 : 3;
+
+        const transStars = chart.fourTransMap[stem];
+        if (!transStars) return { paths, multiLuNodes };
+
+        const starName = transStars[typeIndex];
+        const targetPalace = this.getFlyingStarTarget(chart, stem, typeIndex);
+        if (!targetPalace) return { paths, multiLuNodes };
+
+        const targetBranch = Object.keys(chart.palaces).find(b => chart.palaces[b].name === targetPalace.name);
+        if (!targetBranch) return { paths, multiLuNodes };
+
+        paths.push({
+            source: startBranch,
+            target: targetBranch,
+            type: currentTypeStr,
+            star: starName,
+            depth: depth
+        });
+
+        // 掃描匯聚 (祿轉忌看誰化祿，忌轉忌看誰化忌)
+        // 核心邏輯：整個路線的主軸由 startType 決定 (祿線 / 忌線)
+        const checkTypeIndex = startType === '祿' ? 0 : 3;
+        
+        let providers = [];
+        Object.keys(chart.palaces).forEach(b => {
+             // 避免與當前發射宮位重複算 (特別是在 depth=0 時)
+            if (b === startBranch && depth === 0) return; 
+            
+            const bStem = chart.palaces[b].celestial;
+            const bTransStars = chart.fourTransMap[bStem];
+            if (!bTransStars) return;
+
+            const checkStar = bTransStars[checkTypeIndex];
+            const checkTarget = this.getFlyingStarTarget(chart, bStem, checkTypeIndex);
+            
+            // 是否飛入同一個宮位？
+            if (checkTarget && checkTarget.name === targetPalace.name) {
+                providers.push({
+                    branch: b,
+                    title: chart.palaces[b].title,
+                    star: checkStar
+                });
+            }
+        });
+
+        // 檢查生年四化 (生年祿 或 生年忌)
+        const targetPObj = chart.palaces[targetBranch];
+        const hasBirthTrans = targetPObj.trans.some(t => t.type === startType);
+
+        let eCount = providers.length + (depth === 0 ? 1 : 0) + (hasBirthTrans ? 1 : 0);
+        
+        // 如果是在轉忌節點 (depth >= 1)，本身帶來的這條線也算入總能量
+        let totalDisplayCount = eCount + (depth >= 1 ? 1 : 0);
+
+        if (providers.length > 0 || hasBirthTrans) {
+            multiLuNodes.push({
+                target: targetBranch,
+                providers: providers,
+                energyCount: totalDisplayCount,
+                hasBirthTrans: hasBirthTrans,
+                traceType: startType // 標記是多祿還是多忌
+            });
+        }
+
+        // Automatic Zhuan Ji (轉忌)
+        // 梁式核心：祿轉忌，忌轉忌。To prevent infinite loop on Ji returning to same node
+        const loop = paths.filter(p => p.source === targetBranch && p.type === '忌').length > 0;
+        
+        // 【新增條件】第2轉(含)之後，必須有對應的飛化(providers) 或「生年四化」才能繼續轉忌
+        let canContinue = true;
+        if (depth >= 1) {
+             if (providers.length === 0 && !hasBirthTrans) {
+                 canContinue = false;
+             }
+        }
+
+        if (!loop && canContinue) {
+            this.tracePath(chart, targetBranch, startType, depth + 1, maxDepth, paths, multiLuNodes);
+        }
+
+        return { paths, multiLuNodes };
     }
 };
 
