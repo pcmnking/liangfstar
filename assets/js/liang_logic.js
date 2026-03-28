@@ -731,6 +731,76 @@ const LiangLogic = {
             meanings, 
             themeColor: this.getThemeColor(p1.title) 
         };
+    },
+
+    // 【新增】流年運勢紅綠燈
+    getAnnualFortuneReport: function(chart, liunianBranch) {
+        if (!liunianBranch) return null;
+        const palaces = Object.values(chart.palaces);
+        const liunianPalace = chart.palaces[liunianBranch];
+        const liunianMingTitle = liunianPalace.title;
+        
+        let score = 0; // 0=黃, >0=綠, <0=紅
+        let items = [];
+
+        // 1. 檢查流年命宮干飛化
+        const stem = liunianPalace.celestial;
+        const transStars = chart.fourTransMap[stem];
+        if (transStars) {
+            transStars.forEach((star, idx) => {
+                const type = chart.transTypes[idx];
+                const targetPalace = palaces.find(p => p.stars.includes(star));
+                if (targetPalace) {
+                    const isInternal = ['命宮', '財帛', '事業', '疾厄', '田宅', '兄弟'].includes(targetPalace.title);
+                    if (type === '祿' && isInternal) {
+                        score += 1;
+                        items.push({ text: `祿入${targetPalace.title}`, type: 'good' });
+                    } else if (type === '忌' && !isInternal) {
+                        score -= 1;
+                        items.push({ text: `忌出${targetPalace.title}`, type: 'bad' });
+                    } else if (type === '忌' && isInternal) {
+                        items.push({ text: `忌入${targetPalace.title}`, type: 'neutral' });
+                    }
+                }
+            });
+        }
+
+        let status = 'yellow';
+        let label = '運勢平穩 (黃燈)';
+        if (score > 1) { status = 'green'; label = '運勢吉祥 (綠燈)'; }
+        else if (score < -1) { status = 'red'; label = '運勢波折 (紅燈)'; }
+
+        return { status, label, items };
+    },
+
+    // 【新增】財運評估
+    getWealthAssessment: function(chart, branch) {
+        if (!branch) return null;
+        const p = chart.palaces[branch];
+        const stem = p.celestial;
+        const trans = chart.fourTransMap[stem];
+        
+        // 尋找祿入與忌入
+        const luStar = trans[0];
+        const jiStar = trans[3];
+        const palaces = Object.values(chart.palaces);
+        const luPalace = palaces.find(pl => pl.stars.includes(luStar));
+        const jiPalace = palaces.find(pl => pl.stars.includes(jiStar));
+
+        let analysis = `宮位：${p.title} (${p.name})`;
+        let advice = "財源一般，宜守不宜攻。";
+        let color = "#666";
+
+        if (luPalace && ['命宮', '財帛', '田宅', '兄弟'].includes(luPalace.title)) {
+            advice = "財源廣進，肥水不落外人田，利於投資或增加收入。";
+            color = "#2e7d32";
+        }
+        if (jiPalace && ['遷移', '子女', '交友'].includes(jiPalace.title)) {
+            advice = "財帛流向外部，開銷大或有損財風險，需注意守財。";
+            color = "#c62828";
+        }
+
+        return { analysis, advice, color };
     }
 };
 

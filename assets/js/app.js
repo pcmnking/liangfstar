@@ -913,35 +913,6 @@ document.addEventListener('DOMContentLoaded', () => {
         html += '</div>';
         ui.chartContainer.innerHTML = html;
 
-        // Add Click Listeners to Palace Titles
-        document.querySelectorAll('.js-palace-title').forEach(el => {
-            el.addEventListener('click', function (e) {
-                e.stopPropagation(); // Prevent triggering other clicks
-                const title = this.dataset.title;
-                const branch = this.parentElement.dataset.branch;
-                const meaning = (typeof ZIWEI_DATA_PALACE_MEANING !== 'undefined' && ZIWEI_DATA_PALACE_MEANING[title])
-                    ? ZIWEI_DATA_PALACE_MEANING[title]
-                    : '(暫無此宮位象義)';
-
-                const midPanelContent = document.getElementById('floating-panel-content');
-                if (midPanelContent) {
-                    midPanelContent.innerHTML = `
-                        <div style="text-align:left; height:100%; box-sizing: border-box;">
-                            <h3 style="text-align:center; color:#1a237e; margin-top:0; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">${title}象義</h3>
-                            <div style="text-align:center; margin-bottom: 10px;">
-                                <button class="liang-btn trace-lu-btn" data-branch="${branch}" style="padding:5px 10px; cursor:pointer; background-color:#1e88e5; color:white; border:none; border-radius:4px; font-size: 0.9em;">追蹤祿轉忌</button>
-                                <button class="liang-btn trace-ji-btn" data-branch="${branch}" style="padding:5px 10px; cursor:pointer; background-color:#e53935; color:white; border:none; border-radius:4px; margin-left:5px; font-size: 0.9em;">追蹤忌轉忌</button>
-                            </div>
-                            <div class="liang-trace-result" style="margin-bottom: 15px; font-size: 0.9em; line-height: 1.5; color: #444;"></div>
-                            <div style="font-size:0.95em; line-height:1.6; color:#333; white-space: pre-wrap;">${meaning}</div>
-                        </div>
-                    `;
-                }
-                const floatingPanel = document.getElementById('floating-info-panel');
-                if (floatingPanel) floatingPanel.style.display = 'flex';
-            });
-        });
-
         // Draw arrows if a palace is selected
         activeSourceBranches.forEach(branch => {
             drawTransformationArrows(branch);
@@ -1143,6 +1114,51 @@ document.addEventListener('DOMContentLoaded', () => {
             ui.analysisContainer.innerHTML = `<h3>飛化分析</h3><p style="color:#666;">點擊盤面天干或星曜查看詳情...</p>`;
         }
 
+        // Render Liang Analysis Reports (Fortune / Wealth)
+        if (ui.liangReport) {
+            let reportHtml = `<h3>梁式飛化深度評估</h3>`;
+            reportHtml += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">`;
+
+            // 1. Annual Fortune (Red/Green Light)
+            if (ui.liunianPos.value && window.LiangLogic.getAnnualFortuneReport) {
+                const report = window.LiangLogic.getAnnualFortuneReport(chart, ui.liunianPos.value);
+                const colors = { green: '#e8f5e9', yellow: '#fffde7', red: '#ffebee' };
+                const textColors = { green: '#2e7d32', yellow: '#f57f17', red: '#c62828' };
+                const borderColor = textColors[report.status];
+
+                reportHtml += `
+                    <div style="background: ${colors[report.status]}; border: 2px solid ${borderColor}; padding: 15px; border-radius: 12px;">
+                        <h4 style="margin:0 0 10px 0; color: ${borderColor};">🚥 流年 ${ui.liunianPos.value}宮 運勢紅綠燈</h4>
+                        <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 10px; color: ${borderColor};">${report.label}</div>
+                        <ul style="padding-left: 20px; font-size: 0.9em; color: #555;">
+                            ${report.items.map(it => `<li>${it.text}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                reportHtml += `<div style="padding: 15px; background: #f9f9f9; border-radius: 12px; border: 2px dashed #ddd; color: #999;">請選擇「流年命宮」以生成運勢紅綠燈。</div>`;
+            }
+
+            // 2. Wealth Assessment
+            if (window.LiangLogic.getWealthAssessment) {
+                // Assessment for Birth Wealth Palace
+                const wealthPalace = Object.values(chart.palaces).find(p => p.title.includes('財帛'));
+                if (wealthPalace) {
+                    const assessment = window.LiangLogic.getWealthAssessment(chart, wealthPalace.branch);
+                    reportHtml += `
+                        <div style="background: #f1f8ff; border: 2px solid #0366d6; padding: 15px; border-radius: 12px;">
+                            <h4 style="margin:0 0 10px 0; color: #0366d6;">💰 本命【財運評估】</h4>
+                            <div style="font-size: 0.95em; color: #333; margin-bottom: 8px;"><strong>分析：</strong>${assessment.analysis}</div>
+                            <div style="font-size: 1em; color: ${assessment.color}; font-weight: 500;"><strong>建議：</strong>${assessment.advice}</div>
+                        </div>
+                    `;
+                }
+            }
+
+            reportHtml += `</div>`;
+            ui.liangReport.innerHTML = reportHtml;
+        }
+
 
         // Helper to generate layer HTML
         const renderLayer = (title, layerMingBranch, themeColor) => {
@@ -1260,6 +1276,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ui.liunianPos.value) {
             allHtml += renderLayer('流年各宮飛化', ui.liunianPos.value, '#388e3c');
         }
+
+        // Reset Arrow Canvas
+        const arrowContainer = document.getElementById('arrow-container');
+        if (arrowContainer) arrowContainer.innerHTML = '';
+
+        // Draw Arrows for selected sources
+        activeSourceBranches.forEach(branch => {
+            drawTransformationArrows(branch);
+        });
+
+        // Draw Arrows for selected targets (incoming)
+        activeTargetStars.forEach(star => {
+            drawIncomingTransformationArrows(star);
+        });
 
         if (ui.allTransContainer) ui.allTransContainer.innerHTML = allHtml;
 
@@ -2082,6 +2112,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Reactivity (Event Delegation)
     document.body.addEventListener('click', (e) => {
+        const midPanelContent = document.getElementById('floating-panel-content');
+        const floatingPanel = document.getElementById('floating-info-panel');
+        
         // Handle Trace Buttons
         if (e.target.classList.contains('trace-lu-btn') || e.target.classList.contains('trace-ji-btn')) {
             const branch = e.target.dataset.branch;
@@ -2162,33 +2195,66 @@ document.addEventListener('DOMContentLoaded', () => {
             return; // stop execution because we handled button click
         }
 
-        // Handle Palace Group Highlighting (Glow)
+        // Handle Palace Group Highlighting (Glow) & Trigger Flying Stars
         if (e.target.classList.contains('js-palace-label')) {
             const palaceGroupName = e.target.dataset.palace;
             if (!palaceGroupName) return;
 
-            // Clear previous glows if clicking a different one, or if click is toggle
-            const isAlreadyGlowing = e.target.closest('.palace') && e.target.closest('.palace').classList.contains('palace-group-glow');
-            
-            document.querySelectorAll('.palace-group-glow').forEach(el => el.classList.remove('palace-group-glow'));
-
-            if (!isAlreadyGlowing) {
-                // Find all palaces that have this label
-                document.querySelectorAll('.js-palace-label').forEach(label => {
-                    if (label.dataset.palace === palaceGroupName) {
-                        const parentPalace = label.closest('.palace');
-                        if (parentPalace) {
-                            parentPalace.classList.add('palace-group-glow');
-                        }
-                    }
-                });
+            // 1. Trigger Flying Stars Analysis for this palace's branch
+            const parentPalace = e.target.closest('.palace');
+            if (parentPalace) {
+                const branch = parentPalace.dataset.branch;
+                if (activeSourceBranches.has(branch)) {
+                    activeSourceBranches.delete(branch);
+                } else {
+                    activeSourceBranches.add(branch);
+                }
+                render();
             }
-            e.stopPropagation();
+
+            // 2. Glow effect (preserved after render)
+            // Re-apply classes because render() might have wiped them
+            document.querySelectorAll('.js-palace-label').forEach(label => {
+                if (label.dataset.palace === palaceGroupName) {
+                    const p = label.closest('.palace');
+                    if (p) p.classList.add('palace-group-glow');
+                }
+            });
         } else {
              // If clicking anywhere else (except specific buttons), clear glows
              if (!e.target.closest('.js-palace-label')) {
                  document.querySelectorAll('.palace-group-glow').forEach(el => el.classList.remove('palace-group-glow'));
              }
+        }
+
+        // Handle Palace Title Click (Show Palace Meaning)
+        if (e.target.classList.contains('js-palace-title')) {
+            const title = e.target.dataset.palace || e.target.innerText.trim();
+            const cleanTitle = title.replace('宮', '');
+            const palaceDiv = e.target.closest('.palace');
+            const branch = palaceDiv ? palaceDiv.dataset.branch : '';
+            
+            // Try different keys (with or without '宮')
+            const content = ZIWEI_DATA_PALACE_MEANING[cleanTitle + '宮'] || ZIWEI_DATA_PALACE_MEANING[cleanTitle];
+
+            if (content && midPanelContent) {
+                let html = `<h3>【${cleanTitle}宮】宮位象義解讀</h3>`;
+                
+                // Add Liang Style Trace Buttons
+                html += `
+                    <div style="text-align:center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                        <button class="liang-btn trace-lu-btn" data-branch="${branch}" style="padding:6px 12px; cursor:pointer; background-color:#1e88e5; color:white; border:none; border-radius:4px; font-size: 0.9em; font-weight:bold;">追蹤化祿轉忌</button>
+                        <button class="liang-btn trace-ji-btn" data-branch="${branch}" style="padding:6px 12px; cursor:pointer; background-color:#e53935; color:white; border:none; border-radius:4px; margin-left:8px; font-size: 0.9em; font-weight:bold;">追蹤化忌轉忌</button>
+                    </div>
+                    <div class="liang-trace-result" style="margin-bottom: 15px; font-size: 0.9em; line-height: 1.5; color: #444;"></div>
+                `;
+
+                html += `<div class="analysis-item" style="padding: 15px; background: #fafafa; border-radius: 8px; line-height: 1.6; max-height: 45vh; overflow-y: auto; border: 1px solid #eee;">
+                    <div style="white-space: pre-wrap; color: #333; font-size: 0.95em;">${content}</div>
+                </div>`;
+                midPanelContent.innerHTML = html;
+                if (floatingPanel) floatingPanel.style.display = 'flex';
+            }
         }
 
         // Handle Celestial Stem Click (Existing)
@@ -2218,14 +2284,12 @@ document.addEventListener('DOMContentLoaded', () => {
             render();
 
             let data = null;
-
             // Try to find star data in global ZIWEI_DATA_MAIN_STARS
             if (typeof ZIWEI_DATA_MAIN_STARS !== 'undefined') {
                 // Keys in data usually have '星' suffix, e.g. "紫微星"
                 data = ZIWEI_DATA_MAIN_STARS[starName] || ZIWEI_DATA_MAIN_STARS[starName + '星'];
             }
 
-            const midPanelContent = document.getElementById('floating-panel-content');
             if (midPanelContent && data) {
                 // Format and display star data in center panel
                 let html = `<h3>【${starName}】星曜特質分析</h3>`;
