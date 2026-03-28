@@ -1955,7 +1955,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Helper function for drawing liang paths
-    function drawLiangPaths(paths) {
+    function drawLiangPaths(paths, themeColor = null) {
         const arrowContainer = document.getElementById('arrow-container');
         if (!arrowContainer) return;
 
@@ -1976,13 +1976,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!svg.querySelector('defs')) {
             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const colors = { 
+            const baseColors = { 
                 'lu': '#d32f2f', 
                 'quan': '#388e3c', 
                 'ke': '#1976d2', 
                 'ji': '#7b1fa2', 
-                'blue': '#1e88e5', // Lu Trace
-                'red': '#e53935'    // Ji Trace
+                'blue': '#1e88e5', 
+                'red': '#e53935'
             };
 
             const createMarker = (id, color) => {
@@ -2000,8 +2000,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return marker;
             };
 
-            Object.keys(colors).forEach(key => defs.appendChild(createMarker(`arrowhead-${key}`, colors[key])));
+            Object.keys(baseColors).forEach(key => defs.appendChild(createMarker(`arrowhead-${key}`, baseColors[key])));
             
+            // Add Theme Markers
+            if (window.LiangLogic && window.LiangLogic.PALACE_THEME_COLORS) {
+                Object.entries(window.LiangLogic.PALACE_THEME_COLORS).forEach(([name, color]) => {
+                    defs.appendChild(createMarker(`arrowhead-theme-${color.replace('#','')}`, color));
+                });
+            }
+
             svg.appendChild(defs);
         }
 
@@ -2010,9 +2017,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetPos = getPalaceCenter(p.target);
             if (!sourcePos || !targetPos) return;
 
-            // Unified colors based on type: Lu = Blue, Ji = Red
-            const colorHex = p.type === '祿' ? '#1e88e5' : '#e53935';
-            const markerId = p.type === '祿' ? 'arrowhead-blue' : 'arrowhead-red';
+            // Use themeColor if provided, otherwise fallback to Lu/Ji type colors
+            const colorHex = themeColor ? themeColor : (p.type === '祿' ? '#1e88e5' : '#e53935');
+            const markerId = themeColor ? `arrowhead-theme-${themeColor.replace('#','')}` : (p.type === '祿' ? 'arrowhead-blue' : 'arrowhead-red');
 
             const dx = targetPos.x - sourcePos.x;
             const dy = targetPos.y - sourcePos.y;
@@ -2088,9 +2095,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (window.LiangLogic && window.LiangLogic.tracePath) {
                 const result = window.LiangLogic.tracePath(chart, branch, type, 0, 12, [], []);
+                const themeColor = result.themeColor || '#8bc34a';
                 
                 // Draw Paths
-                drawLiangPaths(result.paths);
+                drawLiangPaths(result.paths, themeColor);
                 
                 // Highlight Multiple Lu
                 result.multiLuNodes.forEach(m => {
@@ -2101,11 +2109,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Print finding in the panel
                 const resultDiv = document.querySelector('.liang-trace-result');
                 if (resultDiv) {
-                     let html = `<div style="background: #f1f8e9; padding: 10px; border-radius: 4px; border-left: 4px solid #8bc34a;">`;
-                     html += `<strong>🔍 飛化軌跡：</strong><br>`;
+                     let html = `<div style="background: ${themeColor}11; padding: 15px; border-radius: 8px; border-left: 5px solid ${themeColor}; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">`;
+                     html += `<strong style="color:${themeColor}; font-size:1.1em;">🔍 飛化軌跡 (${chart.palaces[branch].title}組)：</strong><br>`;
                      result.paths.forEach((p, i) => {
                          let stepPrefix = i === 0 ? '首傳' : `第${i+1}轉`;
-                         const color = p.type === '祿' ? '#1e88e5' : '#e53935';
                          
                          let clashText = '';
                          if (p.type === '忌') {
@@ -2115,20 +2122,18 @@ document.addEventListener('DOMContentLoaded', () => {
                              clashText = ` <span style="color:#e53935; font-size:0.85em;">(沖 ${chart.palaces[oppositeBranch].title})</span>`;
                          }
                          
-                         html += `<span style="color:#666; font-size: 0.85em;">[${stepPrefix}]</span> ${chart.palaces[p.source].title} <strong style="color:${color};">化${p.type}入</strong> ${chart.palaces[p.target].title} <span style="color:#999;font-size:0.85em">(${p.star})</span>${clashText}<br>`;
+                         html += `<span style="color:#666; font-size: 0.85em;">[${stepPrefix}]</span> ${chart.palaces[p.source].title} <strong style="color:${themeColor};">化${p.type}入</strong> ${chart.palaces[p.target].title} <span style="color:#999;font-size:0.85em">(${p.star})</span>${clashText}<br>`;
                      });
                      
                      if (result.multiLuNodes.length > 0) {
                          html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ccc;">`;
                          let traceStartType = result.multiLuNodes[0] ? result.multiLuNodes[0].traceType : '祿';
                          let TitleStr = traceStartType === '祿' ? '✨ 多祿會合 (能量匯聚)' : '⚠️ 多忌會合 (損失擴大)';
-                         let ColorStr = traceStartType === '祿' ? '#d84315' : '#4a148c';
-                         html += `<strong style="color:${ColorStr};">${TitleStr}：</strong><br>`;
+                         html += `<strong style="color:${themeColor};">${TitleStr}：</strong><br>`;
                          result.multiLuNodes.forEach(m => {
                              let providers = m.providers.map(pr => `${pr.title}(${pr.star})`).join('、');
                              if (m.hasBirthTrans) providers += `、生年${m.traceType}`;
-                             let mColor = m.traceType === '祿' ? '#c62828' : '#7b1fa2';
-                             html += `<strong style="color:${mColor};">${chart.palaces[m.target].title}</strong> 達成 ${m.energyCount}${m.traceType}會合！<br>&nbsp;╰─ 來源：${providers}<br>`;
+                             html += `<strong style="color:${themeColor};">${chart.palaces[m.target].title}</strong> 達成 ${m.energyCount}${m.traceType}會合！<br>&nbsp;╰─ 來源：${providers}<br>`;
                          });
                          html += `</div>`;
                      } else {
@@ -2137,12 +2142,14 @@ document.addEventListener('DOMContentLoaded', () => {
                      }
 
                      if (window.LiangLogic.getTraceMeaning) {
-                         const meanings = window.LiangLogic.getTraceMeaning(chart, result);
-                         if (meanings && meanings.length > 0) {
+                         const traceAnalysis = window.LiangLogic.getTraceMeaning(chart, result);
+                         const analysisMeanings = traceAnalysis.meanings || [];
+                         const themeColor = traceAnalysis.themeColor || '#8bc34a';
+                         if (analysisMeanings && analysisMeanings.length > 0) {
                              html += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;">`;
                              html += `<strong>📝 象義解析：</strong><br>`;
-                             meanings.forEach(m => {
-                                 html += `<div style="margin-top:5px;"><strong style="color:${m.color}">${m.title}</strong><br><span style="color:#444; font-size: 0.95em;">${m.desc}</span></div>`;
+                             analysisMeanings.forEach(m => {
+                                 html += `<div style="margin-top:5px;"><strong style="color:${themeColor}">${m.title}</strong><br><span style="color:#444; font-size: 0.95em;">${m.desc}</span></div>`;
                              });
                              html += `</div>`;
                          }
