@@ -218,7 +218,7 @@ const LiangLogic = {
         if (isLuEnter || isLuShine) {
             trafficLight = "Green";
             score = 90;
-            summary = "【衝刺年】大運氣流助攻！今年是事半功倍的一年。大限化祿進入你的流年命宮（或照），代表機會主動找上門。適合創業、求職、擴大投資。請大膽行動，不要浪費好運。";
+            summary = "【衝刺年】大運氣流助攻！今年是事半功倍的一年。大運化祿進入你的流年命宮（或照），代表機會主動找上門。適合創業、求職、擴大投資。請大膽行動，不要浪費好運。";
         }
 
         // Red Light Logic: Da Yun Ji -> Opposite of Year Ming (Clash Year Ming)
@@ -228,7 +228,7 @@ const LiangLogic = {
         if (isJiClash) {
             trafficLight = "Red";
             score = 50;
-            summary = "【防守年】警報響起！今年你站在大限化忌的『靶心』上。環境充滿變數與排斥力。建議『多看少做』，嚴禁重大投資、借貸或隨意離職。安分守己，保平安就是最大的獲利。";
+            summary = "【防守年】警報響起！今年你站在大運化忌的『靶心』上。環境充滿變數與排斥力。建議『多看少做』，嚴禁重大投資、借貸或隨意離職。安分守己，保平安就是最大的獲利。";
         }
 
         // Special Logic: Overlap Advice
@@ -256,10 +256,10 @@ const LiangLogic = {
             summary: summary,
             detailedAdvice: detailedAdvice,
             reason: trafficLight === 'Green' ?
-                `大限${decadeStem}干 ${daYunLuStar}化祿 ${(isLuEnter ? "入" : "照")} 流年命宮(${yearBranch})` :
+                `大運${decadeStem}干 ${daYunLuStar}<span style="color:#1e88e5; font-weight:bold;">化祿</span> ${(isLuEnter ? "入" : "照")} 流年命宮(${yearBranch})` :
                 (trafficLight === 'Red' ?
-                    `大限${decadeStem}干 ${daYunJiStar}化忌 沖 流年命宮(${yearBranch})` :
-                    `大限${decadeStem}干 祿忌皆未沖照流年命宮`
+                    `大運${decadeStem}干 ${daYunJiStar}<span style="color:#e53935; font-weight:bold;">化忌</span> 沖 流年命宮(${yearBranch})` :
+                    `大運${decadeStem}干 祿忌皆未沖照流年命宮`
                 )
         };
     },

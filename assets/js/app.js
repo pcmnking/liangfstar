@@ -853,7 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (offset < 0) offset += 12;
                 const title = chart.palaceNames[offset];
                 // Strip '宮' for brevity if desired, but user asked for "names"
-                const displayTitle = '大限' + title.replace('宮', '');
+                const displayTitle = '大運' + title.replace('宮', '');
 
                 // Check if this palace name should be highlighted
                 const bgColor = matchingPalaces.dayun.has(title) ? 'background-color: rgba(25, 118, 210, 0.2); padding: 2px 4px; border-radius: 3px;' : '';
@@ -1170,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let pObj = chart.palaces[currentBranch];
                 let stem = pObj.celestial;
 
-                // Get the "Layer Title" (e.g. Da Xian Ming, Da Xian Brother...)
+                // Get the "Layer Title" (e.g. Da Yun Ming, Da Yun Brother...)
                 // chart.palaceNames[i] is the title relative to the layer Ming.
                 let layerTitle = chart.palaceNames[i];
 
@@ -1214,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (isZiHua) {
                                 displayTitle = `<strong style="color:${color}">自化${type}</strong>`;
                                 if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
-                                    interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'];
+                                    interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'] || '';
                                 } else {
                                     interpretation = '(暫無自化象義)';
                                 }
@@ -1735,7 +1735,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 let offset = (mingIdx - currentIdx) % 12;
                                 if (offset < 0) offset += 12;
                                 const title = chart.palaceNames[offset];
-                                extraHtml += '<div class="dayun-title">大限' + title.replace('宮', '') + '</div>';
+                                extraHtml += '<div class="dayun-title">大運' + title.replace('宮', '') + '</div>';
                             }
                             if (ui.liunianPos.value) {
                                 const mingIdx = chart._getIndex(ui.liunianPos.value);
@@ -1976,8 +1976,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!svg.querySelector('defs')) {
             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const colors = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2', 'blue': '#1e88e5', 'red': '#e53935' };
-            const seqColors = ['#d32f2f', '#c2185b', '#7b1fa2', '#512da8', '#303f9f', '#1976d2', '#0288d1', '#0097a7', '#00796b', '#388e3c', '#689f38', '#afb42b'];
+            const colors = { 
+                'lu': '#d32f2f', 
+                'quan': '#388e3c', 
+                'ke': '#1976d2', 
+                'ji': '#7b1fa2', 
+                'blue': '#1e88e5', // Lu Trace
+                'red': '#e53935'    // Ji Trace
+            };
 
             const createMarker = (id, color) => {
                 const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
@@ -1995,7 +2001,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
 
             Object.keys(colors).forEach(key => defs.appendChild(createMarker(`arrowhead-${key}`, colors[key])));
-            seqColors.forEach((color, idx) => defs.appendChild(createMarker(`arrowhead-seq-${idx}`, color)));
             
             svg.appendChild(defs);
         }
@@ -2005,9 +2010,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetPos = getPalaceCenter(p.target);
             if (!sourcePos || !targetPos) return;
 
-            const seqColors = ['#d32f2f', '#c2185b', '#7b1fa2', '#512da8', '#303f9f', '#1976d2', '#0288d1', '#0097a7', '#00796b', '#388e3c', '#689f38', '#afb42b'];
-            const colorIdx = idx % seqColors.length;
-            const colorHex = seqColors[colorIdx];
+            // Unified colors based on type: Lu = Blue, Ji = Red
+            const colorHex = p.type === '祿' ? '#1e88e5' : '#e53935';
+            const markerId = p.type === '祿' ? 'arrowhead-blue' : 'arrowhead-red';
 
             const dx = targetPos.x - sourcePos.x;
             const dy = targetPos.y - sourcePos.y;
@@ -2039,7 +2044,7 @@ document.addEventListener('DOMContentLoaded', () => {
             pathEl.setAttribute('stroke', colorHex);
             pathEl.setAttribute('fill', 'none');
             pathEl.setAttribute('stroke-width', '3');
-            pathEl.setAttribute('marker-end', `url(#arrowhead-seq-${colorIdx})`);
+            pathEl.setAttribute('marker-end', `url(#${markerId})`);
             svg.appendChild(pathEl);
 
             // Add sequence number text
@@ -2100,8 +2105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      html += `<strong>🔍 飛化軌跡：</strong><br>`;
                      result.paths.forEach((p, i) => {
                          let stepPrefix = i === 0 ? '首傳' : `第${i+1}轉`;
-                         const seqColors = ['#d32f2f', '#c2185b', '#7b1fa2', '#512da8', '#303f9f', '#1976d2', '#0288d1', '#0097a7', '#00796b', '#388e3c', '#689f38', '#afb42b'];
-                         let color = seqColors[i % seqColors.length];
+                         const color = p.type === '祿' ? '#1e88e5' : '#e53935';
                          
                          let clashText = '';
                          if (p.type === '忌') {
