@@ -185,7 +185,7 @@ const LiangLogic = {
         const decadeStem = decadePalace.celestial;
 
         // 1. Overlap (Theme)
-        const overlapTitle = yearPalace.title; // e.g., "田宅"
+        const overlapTitle = yearPalace.title.replace('宮', ''); // e.g., "事業"
         const theme = `流年命宮 重疊 本命${overlapTitle}宮`;
 
         // 2. Traffic Light Logic (Decade -> Year)
@@ -399,18 +399,27 @@ const LiangLogic = {
         const yearlyFortune = this.analyzeYearlyFortune(chart);
         if (yearlyFortune) {
             const lightColor = yearlyFortune.trafficLight === 'Green' ? '#4caf50' : (yearlyFortune.trafficLight === 'Red' ? '#f44336' : '#ffc107');
+            const lightBg = yearlyFortune.trafficLight === 'Green' ? '#f1f8e9' : (yearlyFortune.trafficLight === 'Red' ? '#ffebee' : '#fffde7');
             const lightIcon = yearlyFortune.trafficLight === 'Green' ? '🟢' : (yearlyFortune.trafficLight === 'Red' ? '🔴' : '🟡');
 
-            html += `<div class="report-section" style="margin-bottom: 20px; border: 2px solid ${lightColor}; border-radius: 8px; padding: 15px; background-color: white;">`;
-            html += `<h4 style="margin: 0 0 10px 0; color: ${lightColor}; border-bottom: 1px dashed #eee; padding-bottom: 5px;">${lightIcon} ${yearlyFortune.yearLabel} 運勢紅綠燈</h4>`;
-            html += `<p style="margin: 5px 0;"><strong>年度主題：</strong>${yearlyFortune.theme}</p>`;
-            html += `<p style="margin: 5px 0; font-size: 1.1em; font-weight: bold; color: #333;">${yearlyFortune.summary.split('。')[0]}。</p>`; // Title only
-            html += `<p style="line-height: 1.6; color: #424242; font-size: 0.95em;">${yearlyFortune.summary}</p>`;
-            html += `<div style="margin-top: 10px; padding: 10px; background: #f9f9f9; border-left: 4px solid ${lightColor}; font-size: 0.9em; color: #555;">`;
-            html += `<strong>🎯 重點建議：</strong>${yearlyFortune.detailedAdvice}`;
+            html += `<div class="report-section" style="margin-bottom: 25px; border: 2px solid ${lightColor}; border-radius: 12px; padding: 20px; background-color: ${lightBg}; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; overflow: hidden;">`;
+            html += `<div style="position: absolute; top: -10px; right: -10px; font-size: 80px; opacity: 0.1; color: ${lightColor}; pointer-events: none;">${lightIcon}</div>`;
+            html += `<h4 style="margin: 0 0 15px 0; color: #333; font-size: 1.3em; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.2em;">${lightIcon}</span> ${yearlyFortune.yearLabel} 運勢紅綠燈
+                    </h4>`;
+            html += `<p style="margin: 8px 0; font-size: 1.05em; color: #555;"><strong>年度主題：</strong>${yearlyFortune.theme}</p>`;
+            html += `<p style="margin: 15px 0; font-size: 1.15em; font-weight: bold; color: ${lightColor}; border-left: 4px solid ${lightColor}; padding-left: 12px; background: rgba(255,255,255,0.5);">${yearlyFortune.summary.split('。')[0]}。</p>`; 
+            html += `<p style="line-height: 1.7; color: #444; font-size: 1em; margin-bottom: 20px;">${yearlyFortune.summary}</p>`;
+            
+            html += `<div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #eee; display: flex; gap: 12px; align-items: flex-start;">`;
+            html += `<span style="font-size: 1.5em; line-height: 1;">🎯</span>`;
+            html += `<div><strong style="color:#333; display:block; margin-bottom:4px;">重點建議：</strong><span style="color:#555; line-height:1.5;">${yearlyFortune.detailedAdvice}</span></div>`;
             html += `</div>`;
+
             if (yearlyFortune.reason) {
-                html += `<div style="margin-top:8px; padding:8px; background:#eeeeee; border-radius:4px; font-size:0.9em; color:#666;">🔍 <strong>飛化應期：</strong>${yearlyFortune.reason}</div>`;
+                html += `<div style="margin-top:12px; padding: 10px 15px; background: rgba(0,0,0,0.03); border-radius: 8px; font-size: 0.9em; color: #777; display: flex; gap: 8px; align-items: center;">`;
+                html += `<span>🔍</span> <strong>飛化應期：</strong>${yearlyFortune.reason}`;
+                html += `</div>`;
             }
             html += `</div>`;
         }
@@ -420,19 +429,23 @@ const LiangLogic = {
         // 1. Wealth
         const wealthAnalysis = this.analyzeWealthVault(chart);
         if (wealthAnalysis) {
-            html += `<div class="report-section" style="margin-bottom: 20px;">`;
-            html += `<h4 style="margin: 10px 0; color: #d81b60;">${wealthAnalysis.title} ${wealthAnalysis.stars}</h4>`;
-            html += `<p><strong>判定：</strong>${wealthAnalysis.result}</p>`;
-            html += `<p style="line-height: 1.6; color: #424242;">${wealthAnalysis.advice}</p>`;
+            html += `<div class="report-section" style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #ffe4e8;">`;
+            html += `<h4 style="margin: 0 0 10px 0; color: #d81b60; font-size: 1.2em; display: flex; align-items: center; gap: 8px;">
+                        <span>✨</span> ${wealthAnalysis.title} <span style="font-size: 0.9em; color: #ffca28; letter-spacing: 2px;">${wealthAnalysis.stars}</span>
+                    </h4>`;
+            html += `<p style="margin: 8px 0;"><strong>判定：</strong>${wealthAnalysis.result}</p>`;
+            html += `<p style="line-height: 1.7; color: #444; font-size: 0.95em;">${wealthAnalysis.advice}</p>`;
             if (wealthAnalysis.reason) {
-                html += `<div style="margin-top:8px; padding:8px; background:#eeeeee; border-radius:4px; font-size:0.9em; color:#666;">🔍 <strong>飛化軌跡：</strong><br>${wealthAnalysis.reason}</div>`;
+                html += `<div style="margin-top:10px; padding:8px 12px; background:#fcfcfc; border-left: 4px solid #d81b60; border-radius: 4px; font-size:0.85em; color:#888;">🔍 <strong>飛化軌跡：</strong>${wealthAnalysis.reason}</div>`;
             }
             html += `</div>`;
         } else {
             // Default safe response if no specific structure found
-            html += `<div class="report-section" style="margin-bottom: 20px;">`;
-            html += `<h4 style="margin: 10px 0; color: #d81b60;">【財運評估】 ⭐⭐⭐</h4>`;
-            html += `<p style="line-height: 1.6; color: #424242;">您的財運走勢較為平穩。建議多關注本命事業宮與財帛宮的星性互動，以專業技能穩步求財為佳。</p>`;
+            html += `<div class="report-section" style="margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #f0f0f0;">`;
+            html += `<h4 style="margin: 0 0 10px 0; color: #d81b60; font-size: 1.2em; display: flex; align-items: center; gap: 8px;">
+                        <span>✨</span> 【財運評估】 <span style="font-size: 0.9em; color: #ffca28; letter-spacing: 2px;">⭐⭐⭐</span>
+                    </h4>`;
+            html += `<p style="line-height: 1.7; color: #444; font-size: 0.95em;">您的財運走勢較為平穩。建議多關注本命事業宮與財帛宮的星性互動，以專業技能穩步求財為佳。</p>`;
             html += `</div>`;
         }
 
