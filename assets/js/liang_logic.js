@@ -599,6 +599,98 @@ const LiangLogic = {
         }
 
         return { paths, multiLuNodes };
+    },
+
+    // 取得飛化路徑的深層象義
+    getTraceMeaning: function(chart, result) {
+        if (!result || !result.paths || result.paths.length < 2) return [];
+        
+        const internalPalaces = ['命宮', '財帛', '事業', '疾厄', '田宅', '兄弟'];
+        
+        const p1 = chart.palaces[result.paths[0].source];
+        const p2 = chart.palaces[result.paths[0].target]; // 中繼點
+        const p3 = chart.palaces[result.paths[1].target]; // 轉忌終點
+        
+        const type = result.paths[0].type; // 首傳是 '祿' 或 '忌'
+        const isP1Internal = internalPalaces.includes(p1.title);
+        const isP2Internal = internalPalaces.includes(p2.title);
+        const isP3Internal = internalPalaces.includes(p3.title);
+        
+        const isOneOf = (title, list) => list.includes(title);
+        const getOpposite = (branch) => {
+            let idx = chart.branches.indexOf(branch);
+            return chart.palaces[chart.branches[(idx + 6) % 12]].title;
+        };
+        const p3OppositeTitle = getOpposite(result.paths[1].target);
+
+        // 產生路徑字串
+        let pArray = [p1.title];
+        result.paths.forEach(p => pArray.push(chart.palaces[p.target].title));
+        const pathStr = `<span style="font-size:0.85em; color:#888; font-weight:normal; margin-left: 8px;">(${pArray.join(' ➔ ')})</span>`;
+
+        let meanings = [];
+        
+        // 封裝 push 函數以自動加入路徑
+        const addMeaning = (title, desc, color) => {
+            meanings.push({ title: title + pathStr, desc, color });
+        };
+        
+        // 特殊象義：絕命忌
+        if (type === '忌') {
+            if (isOneOf(p1.title, ['命宮', '疾厄'])) {
+                if (p3OppositeTitle === '命宮' || p3OppositeTitle === '疾厄' || p3.title === '命宮' || p3.title === '疾厄') {
+                    addMeaning("【絕命忌】", "這是嚴重的能量回扣，代表過度執著於某事，最終導致自我毀滅或重大意外，務必保守。", "#c62828");
+                }
+            }
+        }
+
+        // 特殊象義：進馬忌 / 退馬忌 (同天干引動)
+        if (p2.celestial === p3.celestial) {
+             addMeaning("【退馬/進馬】", "事情會反覆發生，或者能量會產生跳躍式位移，這是一場宿命的輪迴。", "#7b1fa2");
+        }
+        
+        // 核心象義：祿轉忌
+        if (type === '祿') {
+            if (isP1Internal && isP2Internal && isP3Internal) {
+                addMeaning("【大吉：肥水不落外人田】", "錢財與機會在內部循環，能自給自足，財庫豐盈。", "#2e7d32");
+            } else if (isP1Internal && !isP2Internal && isP3Internal) {
+                addMeaning("【貴人助旺】", "透過他人（朋友、客戶）賺錢，最終錢財能回到自己手中。", "#2e7d32");
+            } else if (isP1Internal && isP2Internal && !isP3Internal) {
+                 addMeaning("【祿入忌出：慷慨虛花】", "雖然有賺錢機會，但守不住，錢財最後流向他人或外面。", "#f57c00");
+            } else if (!isP1Internal && isP2Internal && isP3Internal) {
+                 addMeaning("【受人恩惠】", "他人帶來的機會，經過你的努力，成功轉化為實質資產。", "#2e7d32");
+            } else if (isOneOf(p2.title, ['遷移', '子女']) && isOneOf(p3OppositeTitle, ['命宮', '田宅'])) {
+                 addMeaning("【出外消耗】", "為了機會奔波勞碌，結果反而讓家底或元氣受損。", "#f57c00");
+            }
+        } 
+        // 核心象義：忌轉忌
+        else if (type === '忌') {
+            if (isOneOf(p1.title, ['命宮', '疾厄']) && isOneOf(p2.title, ['財帛', '事業']) && p3OppositeTitle === '田宅') {
+                 addMeaning("【傾家蕩產】", "因為自己的失誤或身體問題影響工作，最後賠掉家產。", "#c62828");
+            } else if (p1.title === '夫妻' && isOneOf(p2.title, ['命宮', '疾厄']) && p3.title === '財帛') {
+                 addMeaning("【因情背債】", "配偶給的壓力讓你身心俱疲，還得為對方花錢填坑。", "#c62828");
+            } else if (p1.title === '交友' && p2.title === '事業' && p3.title === '父母') {
+                 addMeaning("【小人毀名】", "同儕或部屬犯錯影響你的事業，甚至造成法律官司。", "#c62828");
+            } else if (p1.title === '財帛' && p2.title === '兄弟' && p3.title === '疾厄') {
+                 addMeaning("【因財傷身】", "為了周轉資金或賺錢，導致身體健康出現大問題。", "#c62828");
+            } else if (p1.title === '田宅' && p2.title === '子女' && p3OppositeTitle === '命宮') {
+                 addMeaning("【家宅不寧】", "房地產或家運出問題，導致你個人運勢跌入谷底。", "#c62828");
+            }
+        }
+
+        // 通用兜底判斷（如果沒符合特殊格局）
+        if (meanings.length === 0) {
+            if (type === '祿') {
+                 if (isP1Internal && isP3Internal) addMeaning("【能量內循環】", "好處最終留給自己，屬於積累型。", "#388e3c");
+                 else if (isP1Internal && !isP3Internal) addMeaning("【祿入忌出】", "雖然有進帳，但最後會流向他人或外面。", "#f57c00");
+                 else if (isOneOf(p3OppositeTitle, ['命宮'])) addMeaning("【祿處逢沖】", "初期順利但結果受損，需防樂極生悲。", "#f57c00");
+            } else {
+                 if (isP3Internal) addMeaning("【壓力轉內】", "糾纏不清、深陷其中，壓力在內部打轉。", "#d32f2f");
+                 else if (!isP3Internal) addMeaning("【災禍外溢】", "此問題會引發連鎖反應，導致更多困擾，恐有拋棄感。", "#d32f2f");
+            }
+        }
+
+        return meanings;
     }
 };
 

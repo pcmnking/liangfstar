@@ -493,38 +493,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Helper to draw specific arrow path
     function drawArrowPath(svg, sourcePos, targetPos, typeClass, offsetIndex) {
-        // Calculate control points for curved arrow
+        // Calculate vector from source to target
         const dx = targetPos.x - sourcePos.x;
         const dy = targetPos.y - sourcePos.y;
 
-        // Create a curved path
-        const curvature = 0.2;
-        const midX = (sourcePos.x + targetPos.x) / 2;
-        const midY = (sourcePos.y + targetPos.y) / 2;
-
-        // Perpendicular offset for curve
-        const offsetX = -dy * curvature;
-        const offsetY = dx * curvature;
+        // Calculate parallel offset for multiple lines
+        const len = Math.sqrt(dx * dx + dy * dy) || 1;
+        const perpX = -dy / len;
+        const perpY = dx / len;
 
         // Add offset based on transformation index to prevent overlapping
-        const indexOffset = (offsetIndex - 1.5) * 15; // Spread arrows
-        const finalOffsetX = offsetX + (offsetY !== 0 ? indexOffset : 0);
-        const finalOffsetY = offsetY + (offsetX !== 0 ? indexOffset : 0);
+        const indexOffset = (offsetIndex - 1.5) * 8; // Spread arrows (smaller gap for straight lines)
+        const finalOffsetX = perpX * indexOffset;
+        const finalOffsetY = perpY * indexOffset;
 
-        const controlX = midX + finalOffsetX;
-        const controlY = midY + finalOffsetY;
+        const startX = sourcePos.x + finalOffsetX;
+        const startY = sourcePos.y + finalOffsetY;
+        const endX = targetPos.x + finalOffsetX;
+        const endY = targetPos.y + finalOffsetY;
 
         // Shorten the arrow to not overlap with palace borders
-        const shortenFactor = 0.85;
-        const adjustedTargetX = sourcePos.x + dx * shortenFactor;
-        const adjustedTargetY = sourcePos.y + dy * shortenFactor;
+        const shortenFactorStart = 0.15; // start slightly away from center
+        const shortenFactorEnd = 0.85;   // end slightly before center
+
+        const adjustedStartX = startX + dx * shortenFactorStart;
+        const adjustedStartY = startY + dy * shortenFactorStart;
+        const adjustedTargetX = startX + dx * shortenFactorEnd;
+        const adjustedTargetY = startY + dy * shortenFactorEnd;
 
         // Create path
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const pathData = `M ${sourcePos.x} ${sourcePos.y} Q ${controlX} ${controlY} ${adjustedTargetX} ${adjustedTargetY}`;
+        const pathData = `M ${adjustedStartX} ${adjustedStartY} L ${adjustedTargetX} ${adjustedTargetY}`;
         path.setAttribute('d', pathData);
         path.setAttribute('class', `arrow-${typeClass}`);
-        path.setAttribute('stroke-dasharray', '5,3');
 
         // Set color based on class
         const colors = {
@@ -903,8 +904,8 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         });
 
-        // Add Center Info Panel
-        html += `<div class="center-info" id="mid-panel"><p style="color:#888; text-align:center; padding-top:20px;">點擊星曜或宮位名稱<br>查看詳細解讀</p></div>`;
+        // Add Center Info Panel (Title Only now)
+        html += `<div class="center-info">紫微斗數命盤</div>`;
 
         // Add Arrow Container for Four Transformations
         html += '<div class="arrow-container" id="arrow-container"></div>';
@@ -922,10 +923,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? ZIWEI_DATA_PALACE_MEANING[title]
                     : '(暫無此宮位象義)';
 
-                const midPanel = document.getElementById('mid-panel');
-                if (midPanel) {
-                    midPanel.innerHTML = `
-                        <div style="padding:15px; text-align:left; height:100%; overflow-y:auto; box-sizing: border-box;">
+                const midPanelContent = document.getElementById('floating-panel-content');
+                if (midPanelContent) {
+                    midPanelContent.innerHTML = `
+                        <div style="text-align:left; height:100%; box-sizing: border-box;">
                             <h3 style="text-align:center; color:#1a237e; margin-top:0; margin-bottom:12px; border-bottom:1px solid #eee; padding-bottom:8px;">${title}象義</h3>
                             <div style="text-align:center; margin-bottom: 10px;">
                                 <button class="liang-btn trace-lu-btn" data-branch="${branch}" style="padding:5px 10px; cursor:pointer; background-color:#1e88e5; color:white; border:none; border-radius:4px; font-size: 0.9em;">追蹤祿轉忌</button>
@@ -936,6 +937,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     `;
                 }
+                const floatingPanel = document.getElementById('floating-info-panel');
+                if (floatingPanel) floatingPanel.style.display = 'flex';
             });
         });
 
@@ -1968,15 +1971,17 @@ document.addEventListener('DOMContentLoaded', () => {
             arrowContainer.appendChild(svg);
         }
 
-        // Keep defs but remove paths
-        Array.from(svg.querySelectorAll('path')).forEach(p => p.remove());
+        // Keep defs but remove previous paths and texts
+        Array.from(svg.querySelectorAll('path, text')).forEach(p => p.remove());
 
         if (!svg.querySelector('defs')) {
             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
             const colors = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2', 'blue': '#1e88e5', 'red': '#e53935' };
-            Object.keys(colors).forEach(key => {
+            const seqColors = ['#d32f2f', '#c2185b', '#7b1fa2', '#512da8', '#303f9f', '#1976d2', '#0288d1', '#0097a7', '#00796b', '#388e3c', '#689f38', '#afb42b'];
+
+            const createMarker = (id, color) => {
                 const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-                marker.setAttribute('id', `arrowhead-${key}`);
+                marker.setAttribute('id', id);
                 marker.setAttribute('markerWidth', '10');
                 marker.setAttribute('markerHeight', '10');
                 marker.setAttribute('refX', '9');
@@ -1984,10 +1989,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 marker.setAttribute('orient', 'auto');
                 const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
                 polygon.setAttribute('points', '0 0, 10 3, 0 6');
-                polygon.setAttribute('fill', colors[key]);
+                polygon.setAttribute('fill', color);
                 marker.appendChild(polygon);
-                defs.appendChild(marker);
-            });
+                return marker;
+            };
+
+            Object.keys(colors).forEach(key => defs.appendChild(createMarker(`arrowhead-${key}`, colors[key])));
+            seqColors.forEach((color, idx) => defs.appendChild(createMarker(`arrowhead-seq-${idx}`, color)));
+            
             svg.appendChild(defs);
         }
 
@@ -1996,41 +2005,71 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetPos = getPalaceCenter(p.target);
             if (!sourcePos || !targetPos) return;
 
-            const colorClass = p.type === '祿' ? 'blue' : 'red';
-            const colorHex = p.type === '祿' ? '#1e88e5' : '#e53935';
+            const seqColors = ['#d32f2f', '#c2185b', '#7b1fa2', '#512da8', '#303f9f', '#1976d2', '#0288d1', '#0097a7', '#00796b', '#388e3c', '#689f38', '#afb42b'];
+            const colorIdx = idx % seqColors.length;
+            const colorHex = seqColors[colorIdx];
 
             const dx = targetPos.x - sourcePos.x;
             const dy = targetPos.y - sourcePos.y;
-            const curvature = 0.2;
-            const midX = (sourcePos.x + targetPos.x) / 2;
-            const midY = (sourcePos.y + targetPos.y) / 2;
-            const offsetX = -dy * curvature;
-            const offsetY = dx * curvature;
-            const indexOffset = (idx - 1.5) * 12; 
-            const finalOffsetX = offsetX + (offsetY !== 0 ? indexOffset : 0);
-            const finalOffsetY = offsetY + (offsetX !== 0 ? indexOffset : 0);
-            const controlX = midX + finalOffsetX;
-            const controlY = midY + finalOffsetY;
 
-            const shortenFactor = 0.82;
-            const adjustedTargetX = sourcePos.x + dx * shortenFactor;
-            const adjustedTargetY = sourcePos.y + dy * shortenFactor;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const perpX = -dy / len;
+            const perpY = dx / len;
+
+            const indexOffset = (idx - 1.5) * 8; 
+            const finalOffsetX = perpX * indexOffset;
+            const finalOffsetY = perpY * indexOffset;
+
+            const startX = sourcePos.x + finalOffsetX;
+            const startY = sourcePos.y + finalOffsetY;
+            const endX = targetPos.x + finalOffsetX;
+            const endY = targetPos.y + finalOffsetY;
+
+            // Shorten the arrow to not overlap with palace borders
+            const shortenFactorStart = 0.15;
+            const shortenFactorEnd = 0.85;
+
+            const adjustedStartX = startX + dx * shortenFactorStart;
+            const adjustedStartY = startY + dy * shortenFactorStart;
+            const adjustedTargetX = startX + dx * shortenFactorEnd;
+            const adjustedTargetY = startY + dy * shortenFactorEnd;
 
             const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            pathEl.setAttribute('d', `M ${sourcePos.x} ${sourcePos.y} Q ${controlX} ${controlY} ${adjustedTargetX} ${adjustedTargetY}`);
+            pathEl.setAttribute('d', `M ${adjustedStartX} ${adjustedStartY} L ${adjustedTargetX} ${adjustedTargetY}`);
             pathEl.setAttribute('stroke', colorHex);
             pathEl.setAttribute('fill', 'none');
             pathEl.setAttribute('stroke-width', '3');
-            if (p.type === '忌') {
-                pathEl.setAttribute('stroke-dasharray', '5,5');
-            }
-            pathEl.setAttribute('marker-end', `url(#arrowhead-${colorClass})`);
+            pathEl.setAttribute('marker-end', `url(#arrowhead-seq-${colorIdx})`);
             svg.appendChild(pathEl);
+
+            // Add sequence number text
+            const textX = (adjustedStartX + adjustedTargetX) / 2;
+            const textY = (adjustedStartY + adjustedTargetY) / 2;
+
+            // Offset the text slightly perpendicular to the line so it doesn't overlap exactly
+            const textOffsetX = perpX * 12;
+            const textOffsetY = perpY * 12;
+
+            const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            textEl.setAttribute('x', textX + textOffsetX);
+            textEl.setAttribute('y', textY + textOffsetY);
+            textEl.setAttribute('fill', colorHex);
+            textEl.setAttribute('font-size', '16px');
+            textEl.setAttribute('font-weight', 'bold');
+            textEl.setAttribute('text-anchor', 'middle');
+            textEl.setAttribute('dominant-baseline', 'middle');
+            textEl.setAttribute('paint-order', 'stroke');
+            textEl.setAttribute('stroke', '#ffffff');
+            textEl.setAttribute('stroke-width', '4px');
+            textEl.setAttribute('stroke-linecap', 'butt');
+            textEl.setAttribute('stroke-linejoin', 'miter');
+            textEl.textContent = (idx + 1).toString();
+            svg.appendChild(textEl);
         });
     }
 
     // Reactivity (Event Delegation)
-    ui.chartContainer.addEventListener('click', (e) => {
+    document.body.addEventListener('click', (e) => {
         // Handle Trace Buttons
         if (e.target.classList.contains('trace-lu-btn') || e.target.classList.contains('trace-ji-btn')) {
             const branch = e.target.dataset.branch;
@@ -2061,7 +2100,8 @@ document.addEventListener('DOMContentLoaded', () => {
                      html += `<strong>🔍 飛化軌跡：</strong><br>`;
                      result.paths.forEach((p, i) => {
                          let stepPrefix = i === 0 ? '首傳' : `第${i+1}轉`;
-                         let color = p.type === '祿' ? '#1e88e5' : '#e53935';
+                         const seqColors = ['#d32f2f', '#c2185b', '#7b1fa2', '#512da8', '#303f9f', '#1976d2', '#0288d1', '#0097a7', '#00796b', '#388e3c', '#689f38', '#afb42b'];
+                         let color = seqColors[i % seqColors.length];
                          
                          let clashText = '';
                          if (p.type === '忌') {
@@ -2091,6 +2131,19 @@ document.addEventListener('DOMContentLoaded', () => {
                          let traceType = result.paths.length > 0 && result.paths[0].type === '忌' ? '忌' : '祿';
                          html += `<div style="margin-top: 8px; color: #888; font-size: 0.85em;">該路徑未形成多${traceType}會合。</div>`;
                      }
+
+                     if (window.LiangLogic.getTraceMeaning) {
+                         const meanings = window.LiangLogic.getTraceMeaning(chart, result);
+                         if (meanings && meanings.length > 0) {
+                             html += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;">`;
+                             html += `<strong>📝 象義解析：</strong><br>`;
+                             meanings.forEach(m => {
+                                 html += `<div style="margin-top:5px;"><strong style="color:${m.color}">${m.title}</strong><br><span style="color:#444; font-size: 0.95em;">${m.desc}</span></div>`;
+                             });
+                             html += `</div>`;
+                         }
+                     }
+
                      html += `</div>`;
                      resultDiv.innerHTML = html;
                 }
@@ -2132,8 +2185,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 data = ZIWEI_DATA_MAIN_STARS[starName] || ZIWEI_DATA_MAIN_STARS[starName + '星'];
             }
 
-            const midPanel = document.getElementById('mid-panel');
-            if (midPanel && data) {
+            const midPanelContent = document.getElementById('floating-panel-content');
+            if (midPanelContent && data) {
                 // Format and display star data in center panel
                 let html = `<h3>【${starName}】星曜特質分析</h3>`;
 
@@ -2177,10 +2230,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 html += `</div>`;
 
-                midPanel.innerHTML = html;
-            } else if (midPanel) {
-                midPanel.innerHTML = `<h3>【${starName}】</h3><p style="text-align:center;">暫無此星曜詳細資料。</p>`;
+                midPanelContent.innerHTML = html;
+            } else if (midPanelContent) {
+                midPanelContent.innerHTML = `<h3>【${starName}】</h3><p style="text-align:center;">暫無此星曜詳細資料。</p>`;
             }
+            
+            const floatingPanel = document.getElementById('floating-info-panel');
+            if (floatingPanel) floatingPanel.style.display = 'flex';
         }
     });
 
@@ -2196,6 +2252,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize Palace Filter
     initializePalaceFilter();
+
+    // Drag functionality for floating panel
+    const floatingPanel = document.getElementById('floating-info-panel');
+    const panelHeader = document.getElementById('floating-panel-header');
+    const closeBtn = document.getElementById('close-floating-panel');
+
+    if (floatingPanel && panelHeader && closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            floatingPanel.style.display = 'none';
+        });
+
+        let isDragging = false;
+        let startX, startY, initialTop, initialLeft;
+
+        panelHeader.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            floatingPanel.classList.add('dragging');
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = floatingPanel.getBoundingClientRect();
+            // Remove transform safely to prevent jumping upon move
+            floatingPanel.style.transform = 'none';
+            floatingPanel.style.left = rect.left + 'px';
+            floatingPanel.style.top = rect.top + 'px';
+            
+            initialLeft = rect.left;
+            initialTop = rect.top;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            floatingPanel.style.left = `${initialLeft + dx}px`;
+            floatingPanel.style.top = `${initialTop + dy}px`;
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                floatingPanel.classList.remove('dragging');
+            }
+        });
+    }
 
     // Initial Render
     render();
