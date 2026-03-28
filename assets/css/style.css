@@ -489,3 +489,18 @@ body {
     50% { box-shadow: 0 0 15px 5px gold; border-color: #ffb300; }
     100% { box-shadow: 0 0 5px 0px gold; border-color: #ffd700; }
 }
+
+.palace-group-glow {
+    background-color: #fffde7 !important;
+    box-shadow: 0 0 15px #fbc02d inset, 0 0 20px #fbc02d !important;
+    border: 2px solid #f9a825 !important;
+    transition: all 0.3s ease;
+    z-index: 15;
+}
+
+.palace-group-glow div[class*="-title"], 
+.palace-group-glow span[class*="-title"] {
+    font-weight: 900 !important;
+    text-decoration: underline;
+    transform: scale(1.1);
+}

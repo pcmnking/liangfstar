@@ -857,7 +857,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Check if this palace name should be highlighted
                 const bgColor = matchingPalaces.dayun.has(title) ? 'background-color: rgba(25, 118, 210, 0.2); padding: 2px 4px; border-radius: 3px;' : '';
-                extraRawHtml += `<div class="dayun-title" style="position:absolute; top:3px; right:5px; font-size:0.8em; color:#1976d2; pointer-events:none; ${bgColor}">${displayTitle}</div>`;
+                extraRawHtml += `<div class="dayun-title js-palace-label" data-palace="${title}" style="position:absolute; top:3px; right:5px; font-size:0.8em; color:#1976d2; pointer-events:auto; cursor:pointer; ${bgColor}">${displayTitle}</div>`;
             }
 
             if (ui.liunianPos.value) {
@@ -870,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Check if this palace name should be highlighted
                 const bgColor = matchingPalaces.liunian.has(title) ? 'background-color: rgba(56, 142, 60, 0.2); padding: 2px 4px; border-radius: 3px;' : '';
-                extraRawHtml += `<div class="liunian-title" style="position:absolute; top:3px; left:5px; font-size:0.8em; color:#388e3c; pointer-events:none; ${bgColor}">${displayTitle}</div>`;
+                extraRawHtml += `<div class="liunian-title js-palace-label" data-palace="${title}" style="position:absolute; top:3px; left:5px; font-size:0.8em; color:#388e3c; pointer-events:auto; cursor:pointer; ${bgColor}">${displayTitle}</div>`;
             }
 
             // Determine palace title background color
@@ -894,7 +894,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             html += `
                 <div class="${classes.join(' ')}" data-branch="${b}">
-                <div class="palace-title js-palace-title" data-title="${p.title}" style="${palaceTitleStyle}">${p.title}</div>
+                <div class="palace-title js-palace-title js-palace-label" data-palace="${p.title}" style="${palaceTitleStyle}">${p.title}</div>
                     <div class="celestial" style="cursor: pointer; text-decoration: underline;" title="點擊顯示四化">${p.celestial}</div>
                     <div class="name">${p.name}</div>
                     ${starsHtml}
@@ -2160,6 +2160,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             return; // stop execution because we handled button click
+        }
+
+        // Handle Palace Group Highlighting (Glow)
+        if (e.target.classList.contains('js-palace-label')) {
+            const palaceGroupName = e.target.dataset.palace;
+            if (!palaceGroupName) return;
+
+            // Clear previous glows if clicking a different one, or if click is toggle
+            const isAlreadyGlowing = e.target.closest('.palace') && e.target.closest('.palace').classList.contains('palace-group-glow');
+            
+            document.querySelectorAll('.palace-group-glow').forEach(el => el.classList.remove('palace-group-glow'));
+
+            if (!isAlreadyGlowing) {
+                // Find all palaces that have this label
+                document.querySelectorAll('.js-palace-label').forEach(label => {
+                    if (label.dataset.palace === palaceGroupName) {
+                        const parentPalace = label.closest('.palace');
+                        if (parentPalace) {
+                            parentPalace.classList.add('palace-group-glow');
+                        }
+                    }
+                });
+            }
+            e.stopPropagation();
+        } else {
+             // If clicking anywhere else (except specific buttons), clear glows
+             if (!e.target.closest('.js-palace-label')) {
+                 document.querySelectorAll('.palace-group-glow').forEach(el => el.classList.remove('palace-group-glow'));
+             }
         }
 
         // Handle Celestial Stem Click (Existing)
