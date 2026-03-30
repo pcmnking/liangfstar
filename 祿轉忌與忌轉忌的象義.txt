@@ -317,3 +317,26 @@ Edited app.js
 
 
 
+
+
+Listed directory liangfstar
+Edited app.js
+Viewed update_ziwei.py:1-145
+
+系統已完成全面更新！
+
+### ✨ 網站更新內容：
+1.  **盤面轉數自動運算**：現在您不需要進行任何點擊，程式在啟動或切換設定時，會自動跑完 12 宮位的「化祿轉忌」與「忌轉忌」追蹤。
+2.  **宮位數據顯示**：在命盤的每個宮位**左下角**，新增了直觀的數據標籤：
+    *   <span style="background:#ffebee; color:#c62828; padding:1px 3px; border-radius:2px; border:1px solid #ffcdd2;">祿:n</span> 代表該宮位化祿後的轉忌總步數（能量發散與累積深度）。
+    *   <span style="background:#f3e5f5; color:#7b1fa2; padding:1px 3px; border-radius:2px; border:1px solid #e1bee7;">忌:n</span> 代表該宮位化忌後的轉忌總步數（壓力糾纏與最終落點深度）。
+3.  **中宮指標說明**：命盤中心新增了**深度分析指標圖例**，幫助使用者快速理解這些數值的涵義（階數越高，代表牽連的人事物越廣）。
+
+這項更新讓「梁派飛星」的深度分析在第一時間就能視覺化呈現，讓解盤者能迅速鎖定命盤中的能量關鍵點。
+
+---
+
+**修改檔案：**
+- [app.js](file:///e:/AI/githup/liangfstar/assets/js/app.js) : 優化中宮圖例與宮位轉數渲染邏輯。
+
+

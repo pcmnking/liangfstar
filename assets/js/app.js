@@ -892,20 +892,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 palaceTitleStyle += ` background: ${bgColor}; padding: 2px 6px; border-radius: 3px;`;
             }
 
+            // Liang Logic Turns Count
+            let liangTurnsHtml = '';
+            if (window.LiangLogic && chart.fourTransMap[p.celestial]) {
+                const luResult = window.LiangLogic.tracePath(chart, b, '祿');
+                const jiResult = window.LiangLogic.tracePath(chart, b, '忌');
+                
+                const luCount = luResult.paths.length;
+                const jiCount = jiResult.paths.length;
+                
+                liangTurnsHtml = `
+                    <div class="liang-turns" style="position:absolute; bottom:5px; left:5px; font-size:0.7em; display:flex; gap:2px; opacity:0.9; font-family:sans-serif; pointer-events:none;">
+                        <span style="background:#ffebee; color:#c62828; padding:1px 3px; border-radius:2px; border:1px solid #ffcdd2;">祿:${luCount}</span>
+                        <span style="background:#f3e5f5; color:#7b1fa2; padding:1px 3px; border-radius:2px; border:1px solid #e1bee7;">忌:${jiCount}</span>
+                    </div>
+                `;
+            }
+
             html += `
                 <div class="${classes.join(' ')}" data-branch="${b}">
-                <div class="palace-title js-palace-title js-palace-label" data-palace="${p.title}" style="${palaceTitleStyle}">${p.title}</div>
+                    <div class="palace-title js-palace-title js-palace-label" data-palace="${p.title}" style="${palaceTitleStyle}">${p.title}</div>
                     <div class="celestial" style="cursor: pointer; text-decoration: underline;" title="點擊顯示四化">${p.celestial}</div>
                     <div class="name">${p.name}</div>
                     ${starsHtml}
                     ${transHtml}
                     ${extraRawHtml}
+                    ${liangTurnsHtml}
                 </div>
             `;
         });
 
-        // Add Center Info Panel (Title Only now)
-        html += `<div class="center-info">紫微斗數命盤</div>`;
+        // Add Center Info Panel with Legend for Turns
+        html += `
+            <div class="center-info">
+                <div style="font-size: 1.4em; font-weight: bold; margin-bottom: 12px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 8px;">紫微斗數命盤</div>
+                <div class="liang-legend" style="margin-top: auto; padding: 10px; background: #fcfcfc; border: 1px dashed #ddd; border-radius: 6px;">
+                    <div style="font-size: 0.9em; font-weight: bold; color: #666; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
+                        <span>📊</span> 梁派飛星深度分析指標
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8em; color: #555;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="background:#ffebee; color:#c62828; padding:1px 4px; border-radius:3px; border:1px solid #ffcdd2; font-family:monospace; font-weight:bold;">祿:n</span>
+                            <span>化祿轉忌總轉數 (能量發散深度)</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="background:#f3e5f5; color:#7b1fa2; padding:1px 4px; border-radius:3px; border:1px solid #e1bee7; font-family:monospace; font-weight:bold;">忌:n</span>
+                            <span>化忌轉忌總轉數 (壓力糾纏深度)</span>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.75em; color: #999; margin-top: 8px; font-style: italic;">
+                        * 數值代表飛化路徑的階數，越多代表人事物牽連越廣。
+                    </div>
+                </div>
+            </div>
+        `;
 
         // Add Arrow Container for Four Transformations
         html += '<div class="arrow-container" id="arrow-container"></div>';
