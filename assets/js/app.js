@@ -347,6 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let activeSourceBranches = new Set(); // Track the specific clicked palace branches
     let activeTargetStars = new Set(); // Track the clicked stars for incoming transformations
+    let isOppositeAnalysisMode = false; // New Mode for Opposite Analysis
 
     // Track selected palaces for filtering (default: all selected)
     let selectedPalaces = new Set(chart.palaceNames);
@@ -449,6 +450,16 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.youbiPos.value = getParam('youbi', '戌');
         ui.dayunPos.value = getParam('dayun', '');
         ui.liunianPos.value = getParam('liunian', '');
+        
+        // Auto-enable opposite analysis if in parameter?
+        if (getParam('opposite', '0') === '1') {
+            isOppositeAnalysisMode = true;
+            const btn = document.getElementById('oppositeAnalysisBtn');
+            if (btn) {
+                btn.style.background = '#333';
+                btn.style.color = 'white';
+            }
+        }
     }
 
     // Update URL when parameters change
@@ -466,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (ui.dayunPos.value) params.set('dayun', ui.dayunPos.value);
         if (ui.liunianPos.value) params.set('liunian', ui.liunianPos.value);
+        if (isOppositeAnalysisMode) params.set('opposite', '1');
 
         const newURL = `${window.location.pathname}?${params.toString()}`;
         window.history.replaceState({}, '', newURL);
@@ -542,14 +554,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Simplified color lookup:
         const type = typeClass.replace('arrow-', '');
-        const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
+        const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2', '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
         path.setAttribute('stroke', colorMap[type]);
 
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke-width', '2');
         path.setAttribute('marker-end', `url(#arrowhead-${type})`);
+        
+        // Add specific data for click events if needed
+        path.setAttribute('data-source', sourcePos.branch || '');
+        path.setAttribute('data-target', targetPos.branch || '');
+        path.style.pointerEvents = 'auto'; // Allow clicking on arrows
+        path.style.cursor = 'pointer';
 
         svg.appendChild(path);
+    }
+
+    // Draw a self-transformation loop arrow
+    function drawSelfTransformationArrow(svg, branch, type, offsetIndex) {
+        const center = getPalaceCenter(branch);
+        if (!center) return;
+
+        const typeMap = { '祿': 'lu', '權': 'quan', '科': 'ke', '忌': 'ji' };
+        const typeClass = typeMap[type] || 'lu';
+        const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        
+        // Create a small arc/loop within the palace
+        const radius = 25;
+        const offset = offsetIndex * 12;
+        // Draw a curve from top-leftish to top-rightish within the cell
+        const x1 = center.x - 35;
+        const y1 = center.y - 35 + offset;
+        const x2 = center.x - 15;
+        const y2 = center.y - 35 + offset;
+        
+        const pathData = `M ${x1} ${y1} A 15 15 0 1 1 ${x2} ${y2}`;
+        
+        // 1. Invisible Thicker Click Area Path
+        const clickPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        clickPath.setAttribute('d', pathData);
+        clickPath.setAttribute('stroke', 'transparent');
+        clickPath.setAttribute('fill', 'none');
+        clickPath.setAttribute('stroke-width', '20'); // Large click area
+        clickPath.style.pointerEvents = 'stroke';
+        clickPath.style.cursor = 'pointer';
+        clickPath.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showCollisionInterpretation(branch, type);
+        });
+        svg.appendChild(clickPath);
+
+        // 2. Visible Dashed Path
+        const pathLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathLine.setAttribute('d', pathData);
+        pathLine.setAttribute('class', `arrow-${typeClass} self-trans-arrow`);
+        pathLine.setAttribute('stroke', colorMap[typeClass]);
+        pathLine.setAttribute('fill', 'none');
+        pathLine.setAttribute('stroke-width', '5'); // Thicker visual line
+        pathLine.style.strokeDasharray = "4,2";
+        pathLine.setAttribute('marker-end', `url(#arrowhead-${typeClass})`);
+        pathLine.style.pointerEvents = 'none'; // Clicks handled by clickPath
+        
+        svg.appendChild(pathLine);
     }
 
     // Helper function to draw transformation arrows
@@ -771,6 +839,182 @@ document.addEventListener('DOMContentLoaded', () => {
         return matches;
     }
 
+    // Logic to draw all opposite flyings and self transformations
+    function drawOppositeAnalysisLines() {
+        const arrowContainer = document.getElementById('arrow-container');
+        if (!arrowContainer) return;
+        
+        const svg = arrowContainer.querySelector('svg');
+        if (!svg) return;
+
+        const branches = chart.branches;
+        const transTypes = chart.transTypes; // ['祿', '權', '科', '忌']
+        const typeClasses = ['lu', 'quan', 'ke', 'ji'];
+
+        branches.forEach((sourceBranch, i) => {
+            const p = chart.palaces[sourceBranch];
+            const stem = p.celestial;
+            const transStars = chart.fourTransMap[stem];
+            if (!transStars) return;
+
+            const oppositeIdx = (i + 6) % 12;
+            const oppositeBranch = branches[oppositeIdx];
+            const pOpp = chart.palaces[oppositeBranch];
+
+            // 1. Check for flying to opposite palace (Include all four for visibility, but focus on Lu/Ji for collision)
+            transStars.forEach((star, idx) => {
+                const type = transTypes[idx];
+                if (!star) return;
+
+                // Robust star matching (handle cases like '紫微星' vs '紫微')
+                const cleanStar = star.replace(/星$/, '');
+                const targetPalace = Object.values(chart.palaces).find(pObj => 
+                    pObj.stars.some(s => s.replace(/星$/, '') === cleanStar)
+                );
+
+                if (targetPalace && targetPalace.name === oppositeBranch) {
+                    // It flies to opposite!
+                    const sourcePos = getPalaceCenter(sourceBranch);
+                    const targetPos = getPalaceCenter(oppositeBranch);
+                    if (sourcePos && targetPos) {
+                        sourcePos.branch = sourceBranch;
+                        targetPos.branch = oppositeBranch;
+                        drawArrowPath(svg, sourcePos, targetPos, typeClasses[idx], idx);
+                    }
+                }
+            });
+
+            // 2. Check for self-transformation (Always show if mode is on)
+            transStars.forEach((star, idx) => {
+                if (p.stars.includes(star)) {
+                    const type = transTypes[idx];
+                    drawSelfTransformationArrow(svg, sourceBranch, type, idx);
+                }
+            });
+        });
+    }
+
+    // Show Collision Interpretation
+    function showCollisionInterpretation(branch, selfTransType) {
+        const p = chart.palaces[branch];
+        const palaceTitle = p.title;
+        const branchIdx = chart._getIndex(branch);
+        const oppositeBranch = chart._getBranch(branchIdx + 6);
+        const pOpp = chart.palaces[oppositeBranch];
+        
+        let info = `<div style="padding: 5px; border-bottom: 2px solid #6a1b9a; margin-bottom: 15px;">
+            <h3 style="margin:0; color:#6a1b9a;">對宮飛化碰撞分析：${palaceTitle}</h3>
+        </div>`;
+        
+        // 1. Check for Birth Year Transformations in this palace (Sihua)
+        if (p.trans && p.trans.length > 0) {
+            info += `<div style="margin-bottom: 25px; border: 2px solid #f9a825; padding: 5px; border-radius: 12px; background: linear-gradient(135deg, #fff9c4 0%, #fffde7 100%); box-shadow: 0 0 10px rgba(249, 168, 37, 0.3);">
+                <div style="font-weight:bold; color:#f57f17; font-size:1.15em; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px;">💎 <span>此宮帶有【生年四化能量】</span> 💎</div>
+                <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; border:1px solid #ffe082;">
+                    <thead style="background:#fff8e1; color:#f57f17; font-size:0.85em; text-transform:uppercase;">
+                        <tr>
+                            <th style="padding:8px 12px; text-align:center; border-bottom:1px solid #ffe082; width:40%;">生年類型</th>
+                            <th style="padding:8px 12px; text-align:center; border-bottom:1px solid #ffe082;">受化星曜</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            p.trans.forEach(t => {
+                const colors = { '祿': '#d32f2f', '權': '#388e3c', '科': '#1976d2', '忌': '#7b1fa2' };
+                const color = colors[t.type] || '#333';
+                info += `<tr>
+                    <td style="padding:10px; border-bottom:1px solid #eee; text-align:center;">
+                        <span style="display:inline-block; padding:3px 8px; background:${color}; color:white; border-radius:4px; font-weight:bold; font-size:0.9em;">生年${t.type}</span>
+                    </td>
+                    <td style="padding:10px; border-bottom:1px solid #eee; text-align:center; font-weight:bold; color:#333;">${t.star}</td>
+                </tr>`;
+            });
+            info += `</tbody></table></div>`;
+        }
+        
+        // Find if there's an incoming flyer from opposite
+        const oppStem = pOpp.celestial;
+        const oppTransStars = chart.fourTransMap[oppStem];
+        const results = [];
+        
+        if (oppTransStars) {
+            oppTransStars.forEach((star, idx) => {
+                if (!star) return;
+                const type = chart.transTypes[idx];
+                if (type !== '祿' && type !== '忌') return; // FOCUS on Lu and Ji for collision meanings
+
+                // Robust star matching
+                const cleanStar = star.replace(/星$/, '');
+                const isInPalace = p.stars.some(s => s.replace(/星$/, '') === cleanStar);
+
+                if (isInPalace) {
+                    // Incoming flying!
+                    let senderTitle = pOpp.title;
+                    if (!senderTitle.endsWith('宮')) senderTitle += '宮';
+                    
+                    const dataKey = senderTitle;
+                    const collisionData = window.ZIWEI_COLLISION_DATA || (typeof ZIWEI_COLLISION_DATA !== 'undefined' ? ZIWEI_COLLISION_DATA : null);
+                    
+                    if (collisionData && collisionData[dataKey]) {
+                        const data = collisionData[dataKey];
+                        // If we are here, it means this palace HAS a self-transformation (because we clicked its arrow).
+                        // In Liang style, an incoming flyer meeting a self-trans triggers the 'Collision' (遇自化) meaning.
+                        const collisionKey = `${type}遇自化`;
+                        
+                        if (data[collisionKey]) {
+                            results.push({
+                                title: `【對宮${type}入 ⚡ 遇自化】${senderTitle} ➜ ${palaceTitle}`,
+                                text: data[collisionKey],
+                                color: type === '祿' ? '#d32f2f' : '#7b1fa2'
+                            });
+                        } else if (data[type]) {
+                            results.push({
+                                title: `【對宮${type}入】${senderTitle} ➜ ${palaceTitle}`,
+                                text: data[type],
+                                color: type === '祿' ? '#d32f2f' : '#7b1fa2'
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        if (results.length > 0) {
+            results.forEach(res => {
+               info += `<div style="margin-bottom:15px; padding:12px; border-left:5px solid ${res.color}; background:#f9f9f9; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="font-weight:bold; color:${res.color}; font-size:1.05em; margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                        <span>${res.color === '#2e7d32' ? '🌟' : '⚡'}</span> ${res.title}
+                    </div>
+                    <p style="font-size:0.95em; color:#444; margin:0; line-height:1.6; white-space: pre-wrap;">${res.text}</p>
+                </div>`;
+            });
+        }
+        
+        // Always show the basic Zihua meaning below
+        if (typeof ZIWEI_DATA_P !== 'undefined' && ZIWEI_DATA_ZIHUA && ZIWEI_DATA_ZIHUA[palaceTitle] && ZIWEI_DATA_ZIHUA[palaceTitle][selfTransType]) {
+            const zihuaText = ZIWEI_DATA_ZIHUA[palaceTitle][selfTransType][palaceTitle] || ZIWEI_DATA_ZIHUA[palaceTitle][selfTransType][palaceTitle + '宮'];
+            if (zihuaText) {
+                info += `<div style="margin-top:20px; border-top:1px dashed #ccc; padding-top:15px; background: #fffaf0; padding:10px; border-radius:4px;">
+                    <div style="font-weight:bold; color:#e67e22; margin-bottom:5px;">[單宮自化${selfTransType}象義參考]</div>
+                    <p style="font-size:0.85em; color:#666; margin:0; line-height:1.5; white-space: pre-wrap;">${zihuaText}</p>
+                </div>`;
+            }
+        }
+
+        if (results.length === 0) {
+             info += `<p style="color:#888; text-align:center; padding:20px;">此宮位雖有自化${selfTransType}，但目前無來自對宮的飛星碰撞。</p>`;
+        }
+
+        // Show in floating panel
+        const panel = document.getElementById('floating-info-panel');
+        const content = document.getElementById('floating-panel-content');
+        if (panel && content) {
+            content.innerHTML = info;
+            panel.style.display = 'block';
+            panel.scrollTop = 0;
+        }
+    }
+
     function render() {
         // Update URL with current parameters
         updateURL();
@@ -814,8 +1058,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let transHtml = '';
             // 1. Birth Year Trans
             if (p.trans.length > 0) {
-                let tStr = p.trans.map(t => `${t.star}${t.type}`).join(' ');
-                transHtml += `<div class="trans">${tStr}</div>`;
+                let tStr = p.trans.map(t => `<span style="color:#d32f2f; font-weight:bold;">[生年${t.type}]</span>`).join(' ');
+                transHtml += `<div class="trans" style="margin-bottom:2px;">${tStr} ${p.trans.map(t => t.star).join(' ')}</div>`;
             }
 
             // 2. Active Highlight Trans (Based on Stem)
@@ -1330,6 +1574,35 @@ document.addEventListener('DOMContentLoaded', () => {
         activeTargetStars.forEach(star => {
             drawIncomingTransformationArrows(star);
         });
+
+        // Mode: Opposite Analysis
+        if (isOppositeAnalysisMode) {
+            // Ensure SVG and markers exist (reuse setup)
+            drawTransformationArrows('寅'); // dummy call to ensure markers
+            const arrowContainer = document.getElementById('arrow-container');
+            if (arrowContainer) {
+                arrowContainer.querySelector('svg').innerHTML = ''; // Clear for fresh mode render
+                // Redo markers because innerHTML emptied them
+                const svg = arrowContainer.querySelector('svg');
+                const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+                const colorMap = { 'lu': '#d32f2f', 'quan': '#388e3c', 'ke': '#1976d2', 'ji': '#7b1fa2' };
+                const typeClasses = ['lu', 'quan', 'ke', 'ji'];
+                ['祿', '權', '科', '忌'].forEach((type, idx) => {
+                    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+                    marker.setAttribute('id', `arrowhead-${typeClasses[idx]}`);
+                    marker.setAttribute('markerWidth', '10'); marker.setAttribute('markerHeight', '10');
+                    marker.setAttribute('refX', '9'); marker.setAttribute('refY', '3');
+                    marker.setAttribute('orient', 'auto');
+                    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    polygon.setAttribute('points', '0 0, 10 3, 0 6');
+                    polygon.setAttribute('fill', colorMap[typeClasses[idx]]);
+                    marker.appendChild(polygon); defs.appendChild(marker);
+                });
+                svg.appendChild(defs);
+                
+                drawOppositeAnalysisLines();
+            }
+        }
 
         if (ui.allTransContainer) ui.allTransContainer.innerHTML = allHtml;
 
@@ -2439,6 +2712,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 isDragging = false;
                 floatingPanel.classList.remove('dragging');
             }
+        });
+    }
+
+    // Opposite Analysis Button Event
+    const oppositeAnalysisBtn = document.getElementById('oppositeAnalysisBtn');
+    if (oppositeAnalysisBtn) {
+        oppositeAnalysisBtn.addEventListener('click', () => {
+            isOppositeAnalysisMode = !isOppositeAnalysisMode;
+            if (isOppositeAnalysisMode) {
+                oppositeAnalysisBtn.style.background = '#333';
+                oppositeAnalysisBtn.style.color = 'white';
+                oppositeAnalysisBtn.innerText = '✅ 對宮解析中';
+            } else {
+                oppositeAnalysisBtn.style.background = '#555';
+                oppositeAnalysisBtn.style.color = 'white';
+                oppositeAnalysisBtn.innerText = '🔍 對宮飛化解析';
+            }
+            render();
         });
     }
 
