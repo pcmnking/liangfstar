@@ -586,8 +586,8 @@ const LiangLogic = {
             const checkStar = bTransStars[checkTypeIndex];
             const checkTarget = this.getFlyingStarTarget(chart, bStem, checkTypeIndex);
             
-            // 是否飛入同一個宮位？
-            if (checkTarget && checkTarget.name === targetPalace.name) {
+            // 是否飛入同一個宮位且為同一個星曜？
+            if (checkTarget && checkTarget.name === targetPalace.name && checkStar === starName) {
                 providers.push({
                     branch: b,
                     title: chart.palaces[b].title,
@@ -596,9 +596,9 @@ const LiangLogic = {
             }
         });
 
-        // 檢查生年四化 (生年祿 或 生年忌)
+        // 檢查生年四化 (生年祿 或 生年忌) - 必須是同一個星曜
         const targetPObj = chart.palaces[targetBranch];
-        const hasBirthTrans = targetPObj.trans.some(t => t.type === startType);
+        const hasBirthTrans = targetPObj.trans.some(t => t.type === startType && t.star === starName);
 
         let eCount = providers.length + (depth === 0 ? 1 : 0) + (hasBirthTrans ? 1 : 0);
         
