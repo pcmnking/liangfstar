@@ -277,7 +277,13 @@ class ZiWeiChart {
             this.palaces[targetBranch].addStar(star.name);
         });
 
-        // 5. Calculate Four Transformations (Birth Year)
+        // 5. Manual Star Placement
+        if (wenqu) this.palaces[wenqu].addStar('文曲');
+        if (wenchang) this.palaces[wenchang].addStar('文昌');
+        if (zuofu) this.palaces[zuofu].addStar('左輔');
+        if (youbi) this.palaces[youbi].addStar('右弼');
+
+        // 6. Calculate Four Transformations (Birth Year)
         let triggerStem = this.birthStem;
         let transStars = this.fourTransMap[triggerStem];
         if (transStars) {
@@ -290,12 +296,6 @@ class ZiWeiChart {
                 });
             });
         }
-
-        // 6. Manual Star Placement
-        if (wenqu) this.palaces[wenqu].addStar('文曲');
-        if (wenchang) this.palaces[wenchang].addStar('文昌');
-        if (zuofu) this.palaces[zuofu].addStar('左輔');
-        if (youbi) this.palaces[youbi].addStar('右弼');
     }
 
     getTransSummary() {
