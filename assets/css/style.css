@@ -157,6 +157,56 @@ body {
     font-size: 0.8em;
 }
 
+/* Sihua Labels (Circle for Birth, Square for Ming) */
+.sihua-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 4px;
+}
+
+.sihua-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+}
+
+.sihua-circle {
+    border-radius: 50%;
+}
+
+.sihua-square {
+    border-radius: 2px;
+}
+
+/* Colors for Sihua */
+.bg-lu { background-color: #d32f2f; }
+.bg-quan { background-color: #388e3c; }
+.bg-ke { background-color: #1976d2; }
+.bg-ji { background-color: #7b1fa2; }
+
+/* Earthly Branch Button */
+.earthly-branch-btn {
+    cursor: pointer;
+    color: #444;
+    font-size: 0.9em;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.earthly-branch-btn:hover {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: bold;
+}
+
 .right-panel {
     flex: 1;
     display: flex;
