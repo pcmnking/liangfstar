@@ -526,6 +526,17 @@ body {
     background-color: #bbdefb;
 }
 
+#copyPalaceParamsBtn {
+    background-color: #f1f8e9;
+    border-color: #388e3c;
+    color: #2e7d32;
+    font-weight: bold;
+}
+
+#copyPalaceParamsBtn:hover {
+    background-color: #c8e6c9;
+}
+
 /* Liang Logic Multi-Lu Highlight */
 .multi-lu-highlight {
     box-shadow: 0 0 15px 5px gold !important;

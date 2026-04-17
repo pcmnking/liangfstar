@@ -342,7 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
         palaceCheckboxes: document.getElementById('palace-checkboxes'),
         selectAllBtn: document.getElementById('selectAllPalaces'),
         deselectAllBtn: document.getElementById('deselectAllPalaces'),
-        clearArrowsBtn: document.getElementById('clearArrowsBtn')
+        clearArrowsBtn: document.getElementById('clearArrowsBtn'),
+        copyPalaceParamsBtn: document.getElementById('copyPalaceParamsBtn'),
+        copyPalaceParamsStatus: document.getElementById('copyPalaceParamsStatus')
     };
 
     let activeSourceBranches = new Set(); // Track the specific clicked palace branches
@@ -1846,6 +1848,75 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Generate concise parameters for all 12 palaces
+    function generatePalaceParamsText() {
+        let textContent = '=== 紫微斗數 12宮位參數列表 ===\n';
+        textContent += '生成時間：' + new Date().toLocaleString('zh-TW') + '\n';
+        textContent += '='.repeat(40) + '\n\n';
+
+        // Get Palace Names in order from Ming
+        const mingBranch = ui.mingPos.value;
+        const mingIdx = chart._getIndex(mingBranch);
+        
+        for (let i = 0; i < 12; i++) {
+            let targetIdx = (mingIdx - i) % 12;
+            if (targetIdx < 0) targetIdx += 12;
+            let currentBranch = chart._getBranch(targetIdx);
+            let pObj = chart.palaces[currentBranch];
+            
+            let benMingRole = pObj.title;
+            let stem = pObj.celestial;
+            let stars = pObj.stars.join('、') || '無';
+            
+            // Stacking Info
+            let stackingStr = `本命：${benMingRole}`;
+            if (ui.dayunPos.value) {
+                const dyMingIdx = chart._getIndex(ui.dayunPos.value);
+                let dyOffset = (dyMingIdx - targetIdx) % 12;
+                if (dyOffset < 0) dyOffset += 12;
+                stackingStr += ` | 大運：${chart.palaceNames[dyOffset]}`;
+            }
+            if (ui.liunianPos.value) {
+                const lnMingIdx = chart._getIndex(ui.liunianPos.value);
+                let lnOffset = (lnMingIdx - targetIdx) % 12;
+                if (lnOffset < 0) lnOffset += 12;
+                stackingStr += ` | 流年：${chart.palaceNames[lnOffset]}`;
+            }
+
+            textContent += `${i + 1}. ${benMingRole} (${currentBranch} | 宮干：${stem})\n`;
+            textContent += `   星曜：${stars}\n`;
+            textContent += `   疊宮：${stackingStr}\n`;
+            
+            // Birth Year Four Trans
+            let birthTrans = pObj.trans.map(t => `${t.star}${t.type}`).join('、');
+            if (birthTrans) textContent += `   生年：${birthTrans}\n`;
+
+            // Flying Stars
+            if (chart.fourTransMap[stem]) {
+                const transStars = chart.fourTransMap[stem];
+                const types = chart.transTypes;
+                let flyStrs = [];
+                transStars.forEach((star, idx) => {
+                    const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
+                    const targetName = targetPalace ? targetPalace.title : '未知';
+                    flyStrs.push(`${types[idx]}➔${targetName}(${star})`);
+                });
+                textContent += `   飛化：${flyStrs.join('、')}\n`;
+                
+                // Self Trans
+                let selfTrans = [];
+                transStars.forEach((star, idx) => {
+                    if (pObj.stars.includes(star)) selfTrans.push(`自化${types[idx]}(${star})`);
+                });
+                if (selfTrans.length > 0) textContent += `   自化：${selfTrans.join('、')}\n`;
+            }
+
+            textContent += '-'.repeat(40) + '\n';
+        }
+        
+        return textContent;
+    }
+
     // Export Text File Logic
     function generateExportText() {
         let textContent = '紫微斗數排盤解讀\n';
@@ -2185,6 +2256,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     copyTextStatus.style.color = 'red';
                     console.error('Copy text error:', err);
                     setTimeout(() => { copyTextStatus.style.display = 'none'; }, 2000);
+                }
+            }
+        });
+    }
+
+    // Copy Palace Parameters Button
+    if (ui.copyPalaceParamsBtn) {
+        ui.copyPalaceParamsBtn.addEventListener('click', async () => {
+            ui.copyPalaceParamsStatus.style.display = 'inline';
+            ui.copyPalaceParamsStatus.textContent = '⏳ 處理中...';
+            ui.copyPalaceParamsStatus.style.color = 'blue';
+
+            try {
+                const textContent = generatePalaceParamsText();
+                await navigator.clipboard.writeText(textContent);
+
+                ui.copyPalaceParamsStatus.textContent = '✓ 已複製';
+                ui.copyPalaceParamsStatus.style.color = 'green';
+                setTimeout(() => { ui.copyPalaceParamsStatus.style.display = 'none'; }, 2000);
+            } catch (err) {
+                // Fallback for older browsers
+                try {
+                    const textContent = generatePalaceParamsText();
+                    const textArea = document.createElement('textarea');
+                    textArea.value = textContent;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+
+                    ui.copyPalaceParamsStatus.textContent = '✓ 已複製';
+                    ui.copyPalaceParamsStatus.style.color = 'green';
+                    setTimeout(() => { ui.copyPalaceParamsStatus.style.display = 'none'; }, 2000);
+                } catch (fallbackErr) {
+                    ui.copyPalaceParamsStatus.textContent = '✗ 複製失敗';
+                    ui.copyPalaceParamsStatus.style.color = 'red';
+                    console.error('Copy palace params error:', err);
+                    setTimeout(() => { ui.copyPalaceParamsStatus.style.display = 'none'; }, 2000);
                 }
             }
         });
