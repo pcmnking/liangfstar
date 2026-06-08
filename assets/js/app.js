@@ -1699,21 +1699,46 @@ document.addEventListener('DOMContentLoaded', () => {
                             const isZiHua = (layerTitle === targetTitle);
 
                             if (isZiHua) {
-                                displayTitle = `<strong style="color:${color}">自化${type}</strong>`;
+                                if (title === '大運各宮飛化') {
+                                    displayTitle = `<strong style="color:${color}">大運${layerTitle} 自化${type}</strong>`;
+                                } else if (title === '流年各宮飛化') {
+                                    displayTitle = `<strong style="color:${color}">流年${layerTitle} 自化${type}</strong>`;
+                                } else {
+                                    displayTitle = `<strong style="color:${color}">自化${type}</strong>`;
+                                }
                                 if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
                                     interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'] || '';
                                 } else {
                                     interpretation = '(暫無自化象義)';
                                 }
                             } else {
-                                displayTitle = `<strong style="color:${color}">${type}入</strong> ${targetTitle}`;
+                                let target = targetTitle;
+                                if (!target.endsWith('宮')) target += '宮';
+                                if (title === '大運各宮飛化') {
+                                    displayTitle = `<strong style="color:${color}">大運${layerTitle} ${type}入</strong> ${target}`;
+                                } else if (title === '流年各宮飛化') {
+                                    displayTitle = `<strong style="color:${color}">流年${layerTitle} ${type}入</strong> ${target}`;
+                                } else {
+                                    displayTitle = `<strong style="color:${color}">${type}入</strong> ${targetTitle}`;
+                                }
                                 interpretation = chart.getInterpretation(layerTitle, type, targetTitle);
+                            }
+
+                            if (!interpretation) interpretation = isZiHua ? '(暫無自化象義)' : '(暫無此象義)';
+
+                            let target = targetTitle;
+                            if (!target.endsWith('宮')) target += '宮';
+                            if (title === '大運各宮飛化') {
+                                const relationDesc = isZiHua ? `大運${layerTitle} 自化${type}` : `大運${layerTitle} ${type}入 ${target}`;
+                                interpretation = `【${relationDesc}】\n` + interpretation;
+                            } else if (title === '流年各宮飛化') {
+                                const relationDesc = isZiHua ? `流年${layerTitle} 自化${type}` : `流年${layerTitle} ${type}入 ${target}`;
+                                interpretation = `【${relationDesc}】\n` + interpretation;
                             }
                         } else {
                             displayTitle = '未知宮位';
+                            interpretation = '(暫無此象義)';
                         }
-
-                        if (!interpretation) interpretation = '(暫無此象義)';
 
                         layerHtml += `
                             <div class="trans-item" style="border-left: 4px solid ${color}; padding: 12px 15px; background: #fafafa; border-radius: 0 4px 4px 0; margin-bottom: 5px;">
@@ -2069,19 +2094,45 @@ document.addEventListener('DOMContentLoaded', () => {
                             const targetTitle = targetPalaceObj.title;
                             const isZiHua = (layerTitle === targetTitle);
                             if (isZiHua) {
-                                displayTitle = '自化' + type;
+                                if (layerName === '大運各宮飛化') {
+                                    displayTitle = `大運${layerTitle} 自化${type}`;
+                                } else if (layerName === '流年各宮飛化') {
+                                    displayTitle = `流年${layerTitle} 自化${type}`;
+                                } else {
+                                    displayTitle = '自化' + type;
+                                }
                                 if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
                                     interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'] || '';
                                 }
                                 if (!interpretation) interpretation = '(暫無自化象義)';
                             } else {
-                                displayTitle = type + '入 ' + targetTitle;
+                                let target = targetTitle;
+                                if (!target.endsWith('宮')) target += '宮';
+                                if (layerName === '大運各宮飛化') {
+                                    displayTitle = `大運${layerTitle} ${type}入 ${target}`;
+                                } else if (layerName === '流年各宮飛化') {
+                                    displayTitle = `流年${layerTitle} ${type}入 ${target}`;
+                                } else {
+                                    displayTitle = type + '入 ' + targetTitle;
+                                }
                                 interpretation = chart.getInterpretation(layerTitle, type, targetTitle);
+                            }
+
+                            if (!interpretation) interpretation = isZiHua ? '(暫無自化象義)' : '(暫無此象義)';
+
+                            let target = targetTitle;
+                            if (!target.endsWith('宮')) target += '宮';
+                            if (layerName === '大運各宮飛化') {
+                                const relationDesc = isZiHua ? `大運${layerTitle} 自化${type}` : `大運${layerTitle} ${type}入 ${target}`;
+                                interpretation = `【${relationDesc}】\n` + interpretation;
+                            } else if (layerName === '流年各宮飛化') {
+                                const relationDesc = isZiHua ? `流年${layerTitle} 自化${type}` : `流年${layerTitle} ${type}入 ${target}`;
+                                interpretation = `【${relationDesc}】\n` + interpretation;
                             }
                         } else {
                             displayTitle = '未知宮位';
+                            interpretation = '(暫無此象義)';
                         }
-                        if (!interpretation) interpretation = '(暫無此象義)';
                         text += '\n[' + type + '] ' + star + ' → ' + displayTitle + '\n';
                         text += interpretation + '\n';
                     });
@@ -2531,19 +2582,45 @@ document.addEventListener('DOMContentLoaded', () => {
                                         const targetTitle = targetPalaceObj.title;
                                         const isZiHua = (layerTitle === targetTitle);
                                         if (isZiHua) {
-                                            displayTitle = '自化' + type;
+                                            if (layerName === '大運各宮飛化') {
+                                                displayTitle = `大運${layerTitle} 自化${type}`;
+                                            } else if (layerName === '流年各宮飛化') {
+                                                displayTitle = `流年${layerTitle} 自化${type}`;
+                                            } else {
+                                                displayTitle = '自化' + type;
+                                            }
                                             if (typeof ZIWEI_DATA_ZIHUA !== 'undefined' && ZIWEI_DATA_ZIHUA[layerTitle] && ZIWEI_DATA_ZIHUA[layerTitle][type]) {
                                                 interpretation = ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle] || ZIWEI_DATA_ZIHUA[layerTitle][type][layerTitle + '宮'] || '';
                                             }
                                             if (!interpretation) interpretation = '(暫無自化象義)';
                                         } else {
-                                            displayTitle = type + '入 ' + targetTitle;
+                                            let target = targetTitle;
+                                            if (!target.endsWith('宮')) target += '宮';
+                                            if (layerName === '大運各宮飛化') {
+                                                displayTitle = `大運${layerTitle} ${type}入 ${target}`;
+                                            } else if (layerName === '流年各宮飛化') {
+                                                displayTitle = `流年${layerTitle} ${type}入 ${target}`;
+                                            } else {
+                                                displayTitle = type + '入 ' + targetTitle;
+                                            }
                                             interpretation = chart.getInterpretation(layerTitle, type, targetTitle);
+                                        }
+
+                                        if (!interpretation) interpretation = isZiHua ? '(暫無自化象義)' : '(暫無此象義)';
+
+                                        let target = targetTitle;
+                                        if (!target.endsWith('宮')) target += '宮';
+                                        if (layerName === '大運各宮飛化') {
+                                            const relationDesc = isZiHua ? `大運${layerTitle} 自化${type}` : `大運${layerTitle} ${type}入 ${target}`;
+                                            interpretation = `【${relationDesc}】\n` + interpretation;
+                                        } else if (layerName === '流年各宮飛化') {
+                                            const relationDesc = isZiHua ? `流年${layerTitle} 自化${type}` : `流年${layerTitle} ${type}入 ${target}`;
+                                            interpretation = `【${relationDesc}】\n` + interpretation;
                                         }
                                     } else {
                                         displayTitle = '未知宮位';
+                                        interpretation = '(暫無此象義)';
                                     }
-                                    if (!interpretation) interpretation = '(暫無此象義)';
                                     html += '<div class="trans-item ' + typeClass + '"><div class="trans-header"><span class="' + colorClass + '">[' + type + ']</span> <span>' + star + '</span> <span style="color: #999;"> ➜ </span> <span class="' + colorClass + '">' + displayTitle + '</span></div><div class="trans-content">' + interpretation + '</div></div>';
                                 });
                             }
