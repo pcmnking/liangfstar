@@ -1,4 +1,4 @@
-
+﻿
 /**
  * Zi Wei Dou Shu Chart Logic
  */
@@ -825,9 +825,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Find which palace this star is in
                         const targetPalaceObj = Object.values(chart.palaces).find(obj => obj.stars.includes(star));
                         if (targetPalaceObj) {
-                            const targetPalaceName = targetPalaceObj.title;
-                            // If source and target palace names match
-                            if (sourcePalaceName === targetPalaceName) {
+                            // 自化亮燈判定：必須比較實際地支座標，不能只比宮名
+                            if (currentBranch === targetPalaceObj.name) {
                                 matches.dayun.add(sourcePalaceName);
                             }
                         }
@@ -856,9 +855,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Find which palace this star is in
                         const targetPalaceObj = Object.values(chart.palaces).find(obj => obj.stars.includes(star));
                         if (targetPalaceObj) {
-                            const targetPalaceName = targetPalaceObj.title;
-                            // If source and target palace names match
-                            if (sourcePalaceName === targetPalaceName) {
+                            // 自化亮燈判定：必須比較實際地支座標，不能只比宮名
+                            if (currentBranch === targetPalaceObj.name) {
                                 matches.liunian.add(sourcePalaceName);
                             }
                         }
@@ -1475,7 +1473,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
                             const targetName = targetPalace ? targetPalace.title : '未知';
                             const sourceName = sourcePalace.title;
-                            const isZiHua = sourceName === targetName;
+                            // 自化判定：比較實際地支座標，不能只比宮名
+                            const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
 
                             // Get Interpretation Text from JSON
                             let interpretation = '';
@@ -1543,7 +1542,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const color = transColors[type] || '#333';
 
                                     const sourceName = sourcePalace.title;
-                                    const isZiHua = sourceName === targetTitle;
+                                    // 自化判定：比較實際地支座標，不能只比宮名
+                                    const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
 
                                     let interpretation = '';
                                     let displayTitle = '';
@@ -1696,7 +1696,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             const targetTitle = targetPalaceObj.title;
 
                             // Conceptual Zi Hua: Source Title (Role) == Target Title (Sector).
-                            const isZiHua = (layerTitle === targetTitle);
+                            // 自化判定：比較實際地支座標，不能只比宮名
+                            const isZiHua = (currentBranch === targetPalaceObj.name);
 
                             if (isZiHua) {
                                 if (title === '大運各宮飛化') {
@@ -1996,7 +1997,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
                         const targetName = targetPalace ? targetPalace.title : '未知';
                         const sourceName = sourcePalace.title;
-                        const isZiHua = sourceName === targetName;
+                        // 自化判定：比較實際地支座標，不能只比宮名
+                            const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
                         let interpretation = '';
                         let displayTitle = '';
                         if (isZiHua) {
@@ -2041,7 +2043,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (starIdx !== -1) {
                                 const type = chart.transTypes[starIdx];
                                 const sourceName = sourcePalace.title;
-                                const isZiHua = sourceName === targetTitle;
+                                // 自化判定：比較實際地支座標，不能只比宮名
+                                    const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
 
                                 let interpretation = '';
                                 let displayTitle = '';
@@ -2092,7 +2095,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         let interpretation = '';
                         if (targetPalaceObj) {
                             const targetTitle = targetPalaceObj.title;
-                            const isZiHua = (layerTitle === targetTitle);
+                            // 自化判定：比較實際地支座標，不能只比宮名
+                            const isZiHua = (currentBranch === targetPalaceObj.name);
                             if (isZiHua) {
                                 if (layerName === '大運各宮飛化') {
                                     displayTitle = `大運${layerTitle} 自化${type}`;
@@ -2486,7 +2490,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     const targetPalace = Object.values(chart.palaces).find(p => p.stars.includes(star));
                                     const targetName = targetPalace ? targetPalace.title : '未知';
                                     const sourceName = sourcePalace.title;
-                                    const isZiHua = sourceName === targetName;
+                                    // 自化判定：比較實際地支座標，不能只比宮名
+                            const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
                                     let interpretation = '';
                                     let displayTitle = '';
                                     if (isZiHua) {
@@ -2531,7 +2536,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                         const colorClass = { '祿': 'color-lu', '權': 'color-quan', '科': 'color-ke', '忌': 'color-ji' }[type];
 
                                         const sourceName = sourcePalace.title;
-                                        const isZiHua = sourceName === targetTitle;
+                                        // 自化判定：比較實際地支座標，不能只比宮名
+                                    const isZiHua = sourcePalace.name === (targetPalace ? targetPalace.name : null);
 
                                         let interpretation = '';
                                         let displayTitle = '';
@@ -2580,7 +2586,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     let interpretation = '';
                                     if (targetPalaceObj) {
                                         const targetTitle = targetPalaceObj.title;
-                                        const isZiHua = (layerTitle === targetTitle);
+                                        // 自化判定：比較實際地支座標，不能只比宮名
+                            const isZiHua = (currentBranch === targetPalaceObj.name);
                                         if (isZiHua) {
                                             if (layerName === '大運各宮飛化') {
                                                 displayTitle = `大運${layerTitle} 自化${type}`;
